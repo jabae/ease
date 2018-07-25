@@ -159,6 +159,9 @@ classdef EM2P < handle
         %% GUI
         startGUI(obj);
   
+        %% load the projection of Aem onto the 2p stack 
+        Aem_proj = project_em_to_stack(obj); 
+
     end
     
     
