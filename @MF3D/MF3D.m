@@ -406,26 +406,40 @@ classdef MF3D < handle
         C_ = decorrTemporal(obj, wd)
         
         %% show image
-        function showImage(obj, ai)
+        function showImage(obj, ai, orientation)
             if numel(ai) == 1
                 ai = obj.reshape(obj.A(:, ai), 3);
-            else
+            elseif ndims(ai) ~=3
                 ai = obj.reshape(ai, 3);
             end
-            [d1, d2, d3, dc] = size(ai);
-            ai_max = max(ai(:));
-            ai_min = quantile(ai(:), 0.1);
-            figure('papersize', [d2, d1*d3]*5/d2);
-            init_fig;
-            for m=1:d3
-                subplot(d3, 1, m);
-                if dc==3
-                    imagesc(squeeze(ai(:, :, m, :)), [ai_min, ai_max + 1*(ai_max==ai_min)]);
-                else
-                    imagesc(ai(:, :, m), [ai_min, ai_max+1*(ai_max==ai_min)]);
-                end
-                axis equal off tight;
+            if ~exist('orientation', 'var') || isempty(orientation)
+                orientation = 'vertical'; 
             end
+            [d1, d2, d3] = size(ai);
+            img_max = max(ai(:))*0.8;
+            if strcmpi(orientation, 'horizental')
+                h = d1+2; 
+                w = d3*(d2+2); 
+                pos_ax = [1-(d2+1)/w, 1/h, d2/w, 1-2/h]; 
+                dpos = [-(d2+2)/w, 0, 0, 0]; 
+            else               
+                h = d3*(d1+2);
+                w = d2+2;
+                pos_ax = [1/w, 1/h, 1-2/w, d1/h];
+                dpos = [0, (d1+2)/h, 0, 0]; 
+            end 
+            figure('papersize', [w, h] / max(w, h)*7);
+            set(gcf, 'color', 'w', ... 
+                'position', [200, 200, 100*get(gcf, 'papersize')], ...
+                'paperposition', [0, 0, get(gcf, 'papersize')]); 
+            
+            for m=1:d3
+                axes('position', pos_ax);
+                imagesc(ai(:, :, d3-m+1), [0, img_max]);
+                axis off; %equal off tight;
+                pos_ax = pos_ax + dpos; 
+            end
+            saveas(gcf, 'a.pdf'); 
         end
         
         %% show video

@@ -1,16 +1,42 @@
 function Aem_proj = extract_em_segments(obj, mscan, mslice)
 %% load the projected data
-if obj.em_load_flag         % choose loading data from matfile directly or from the matlab struct variable
+%{
+%}
+
+%% inputs: 
+%{
+    mscan: scan ID 
+    mslice: slice ID 
+%}
+
+%% outputs: 
+%{
+    Aem_proj: project of each EM segment on the selected slice 
+%}
+
+%% author: 
+%{
+    Pengcheng Zhou 
+    Columbia University, 2018 
+    zhoupc1988@gmail.com
+%}
+
+%% code 
+ % choose loading data from matfile directly or from the matlab struct variable
+if obj.em_load_flag        
     if ~exist_in_workspace('em_data_mem', 'base')
         obj.load_em();
     end
 end
+
+% if mscan/mslice is not specified, then use the current scan/slice id. 
 if ~exist('mscan', 'var')
     mscan = obj.scan_id;
 end
 if ~exist('mslice', 'var')
     mslice = obj.slice_id;
 end
+
 % EM info
 blur_size = obj.em_zblur;   % blurring in z direction
 shifts_em_ii = obj.em_shifts.ii;
@@ -81,7 +107,7 @@ for z=z0:z1
         jj = jj - dx - FOV_2p(3) + 1;
         ind_cropped = sub2ind([d1_2p, d2_2p], ii, jj);
         
-        % uncompress the data find all nonzero pixels
+        % uncompress the data, find all nonzero pixels
         tmpA = cell(obj.PACK_SIZE, 1);
         pack0 = (tmp_slice(:,2)-1) * 64;
         for nn=1:obj.PACK_SIZE

@@ -1,5 +1,25 @@
 function Aem = get_Aem_scan(obj, mscan)
-%% get EM masks in a specified scan ID
+%% get EM masks in a specified scan 
+%{
+%}
+
+%% inputs: 
+%{
+    scan_id: scan ID 
+%}
+
+%% outputs: 
+%{
+    Aem: num_slice X 1 cell array
+%}
+
+%% author: 
+%{
+    Pengcheng Zhou 
+    Columbia University, 2018 
+    zhoupc1988@gmail.com
+%}
+
 if ~exist('mslice','var')
     mscan = obj.scan_id;
 end

@@ -1,8 +1,29 @@
 function EM_masks = get_em_masks(obj)
-% EM masks for each scanning plane
+%% generate binary masks for indicating EM volumes in each scanning planes 
+%{
+    
+%}
+
+%% inputs: 
+%{
+%}
+
+%% outputs: 
+%{
+    EM_masks: num_scan X num_slice cell array, each cell element indicate the
+    spatial mask of EM volume on that plane. 
+%}
+
+%% author: 
+%{
+    Pengcheng Zhou 
+    Columbia University, 2018 
+    zhoupc1988@gmail.com
+%}
+
 EM_masks = cell(obj.num_scans, obj.num_slices);
 FOV_2p = obj.FOV_stack;
-blur_size = obj.em_zblur;
+blur_size = 2*obj.em_zblur;
 ssub = obj.dims_stack(1) / obj.dims_video(1);
 
 % overlay nearby planes

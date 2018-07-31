@@ -56,7 +56,8 @@ classdef EM2P < handle
         slice_id = 1;
         block_id = 1;
         
-        %
+        % initialization 
+        options_init = struct();    % options for initialization 
         init_method = 'regression';     % the default initialization method
         show_init = true;   % interactively running the initialization procedure
         pause_init = false; % show the intermediate results during the initialization
@@ -142,7 +143,7 @@ classdef EM2P < handle
         summary_images = calculate_summary_images(obj, mscan, mblock)
         
         %% load video data into memory
-        load_video_mem(obj, mscan, mblock);
+        neuron = load_video_mem(obj, mscan, mblock);
         
         %% create masks for EM volumes
         get_em_masks(obj);

@@ -73,7 +73,7 @@ if show_fov
         [1, 1, d1_stack, d1_stack, 1]+FOV_stack_(1), 'r');
     fill(em_ranges_all(k, 2), em_ranges_all(k,1), 'g');
     set(gca, 'ydir', 'reverse');
-    legend('whole FOV', 'convex hull of the EM volume', 'cropped FOV');
+    legend('whole FOV', 'cropped FOV', 'convex hull of the EM volume');
     axis equal off tight;
     saveas(gcf, fullfile(obj.output_folder, 'FOV.pdf'));
 end

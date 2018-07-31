@@ -27,7 +27,7 @@ mscan = obj.scan_id;
 mblock = obj.block_id; 
 
 if ~exist('T', 'var') || isempty(T)
-    T = ease.video_T;
+    T = obj.video_T;
 end
 if ~exist('create_new', 'var')
     create_new = false; 
