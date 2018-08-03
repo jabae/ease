@@ -33,16 +33,19 @@ if isnan(ai_corr_max)
 end
 for m=1:ease.num_slices
     z = ease.video_zvals_updated(ease.scan_id, m);
+    dx = ease.em_shifts.jj(ease.scan_id, m);
+    dy = ease.em_shifts.ii(ease.scan_id, m);
     
     axes(ease.gui.ax_corr{m}); cla;
     imagesc(ai_corr(:, :, m), [0, ai_corr_max]);
     axis off tight;
-    hold on; 
+    hold on;
     
     tmp_em = ease.em_ranges{z};
+    
     if ~isempty(tmp_em)
-        xi = (tmp_em(:,2)-ease.FOV_stack(3))/ssub;
-        yi = (tmp_em(:,1)-ease.FOV_stack(1))/ssub;
+        xi = (tmp_em(:,2)-ease.FOV_stack(3)-dx)/ssub;
+        yi = (tmp_em(:,1)-ease.FOV_stack(1)-dy)/ssub;
         plot(xi, yi, '-.r', 'linewidth', 2);
     end
     %% estimate ai and compute the pairwise correlation

@@ -58,8 +58,6 @@ if ~clear_results
     %ignore existing matches
     ids_matched = cell2mat(obj.match_status.em_ids(obj.match_status.status==1));
     Aem_sum(ids_matched) = 0;
-    obj.A = []; 
-    obj.C = []; 
 end
 K_em = length(Aem_sum>0);    % number of EM components.
 
@@ -238,8 +236,11 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
             imagesc(ai_new(:, :, m), [0, ai_new_max/2]);
             axis equal off tight;
         end
-        subplot(Nrows, 3, 4:6); hold on;
+        subplot(Nrows, 3, 4:6);
+        cla; 
+        plot(ci_new_raw); hold on;
         plot(ci_new, 'r', 'linewidth', 1);
+        axis tight; 
     end
     
     %% quality control
@@ -249,6 +250,13 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
         display('hmmm, try next');
         if save_fig
             saveas(gcf, fullfile(output_folder, sprintf('delete_%d.pdf', k_tried)));
+        end
+       
+        % find the next candidate neuron 
+        temp = reshape(ai_new(:)./norm(ai_new(:), 2), 1, []) * A_; 
+        [tmp_max, tmp_ind] = max(temp); 
+        if tmp_max>=min_similarity 
+            cc(tmp_ind) = inf;  % find the next candidate neuron 
         end
         continue;
     end

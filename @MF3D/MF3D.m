@@ -108,6 +108,9 @@ classdef MF3D < handle
                 return;
             end
             
+            if size(obj.scores,1) == size(obj.A, 2)
+                obj.scores(ind, :) = [];
+            end
             obj.A(:, ind) = [];
             obj.A_mask(:, ind) = [];
             if ~isempty(obj.A_corr)
@@ -129,36 +132,14 @@ classdef MF3D < handle
                 obj.match_status.status(ind) = [];
                 obj.match_status.em_ids(ind) = [];
             end
-            if size(obj.scores,1) == size(obj.A, 2)
-                obj.scores(ind, :) = [];
-            end
+            
             % save the log
         end
         
         
         %% view neurons
-        function showNeurons(obj, A_, ind)
-            if ~exist('A_', 'var') || isempty(A_)
-                A_ = obj.A;
-            end
-            if ~exist('ind', 'var') || isempty(ind)
-                ind = 1:size(A_, 2);
-            end
-            
-            figure;
-            d3 = obj.options.d3;
-            for m=1:length(ind)
-                ai = obj.reshape(A_(:, ind(m)), 3);
-                ai_max = max(ai(:));
-                for n=d3:-1:1
-                    subplot(d3, 1, n);
-                    imagesc(ai(:, :, n), [0, ai_max*0.8]);
-                    axis equal off tight;
-                end
-                title(sprintf('neuron %d', m)); %ind(m)));
-                pause(.1);
-            end
-        end
+        showNeuron(obj, ind, orientation); 
+        
         %% determine spatial support
         Amask = determine_spatial_support(obj);
         
@@ -208,8 +189,8 @@ classdef MF3D < handle
         end
         %% computate the correlation coefficients between the video and neurons' activity
         function A_corr = calculate_corr(obj, Yr, type)
-            if ~exist('type', 'var') || isempty(type) 
-                type = 'residual'; 
+            if ~exist('type', 'var') || isempty(type)
+                type = 'residual';
             end
             if strcmpi(type, 'residual')
                 Yres = obj.reshape(Yr, 1) - obj.A*obj.C - obj.b*obj.f;
@@ -271,7 +252,7 @@ classdef MF3D < handle
             if iscell(Aem)
                 Aem = obj.convert_matrix(Aem);
             end
-            em_mask = (sum(Aem, 2)<=0);
+            em_mask = (sum(Aem, 2)<=0);   % constrain to the area within the EM volume
             
             % compute matching score
             A_ = obj.A;
@@ -367,7 +348,7 @@ classdef MF3D < handle
                     obj.scores = obj.scores(srt, :);
                 end
                 obj.A_corr = obj.A_corr(:, srt);
-
+                
             end
         end
         
@@ -406,40 +387,42 @@ classdef MF3D < handle
         C_ = decorrTemporal(obj, wd)
         
         %% show image
-        function showImage(obj, ai, orientation)
+        function showImage(obj, ai, orientation, vlim)
             if numel(ai) == 1
                 ai = obj.reshape(obj.A(:, ai), 3);
             elseif ndims(ai) ~=3
                 ai = obj.reshape(ai, 3);
             end
             if ~exist('orientation', 'var') || isempty(orientation)
-                orientation = 'vertical'; 
+                orientation = 'vertical';
             end
             [d1, d2, d3] = size(ai);
             img_max = max(ai(:))*0.8;
+            if ~exist('vlim', 'var') || isempty(vlim)
+                vlim = [0, img_max];
+            end
             if strcmpi(orientation, 'horizental')
-                h = d1+2; 
-                w = d3*(d2+2); 
-                pos_ax = [1-(d2+1)/w, 1/h, d2/w, 1-2/h]; 
-                dpos = [-(d2+2)/w, 0, 0, 0]; 
-            else               
+                h = d1+2;
+                w = d3*(d2+2);
+                pos_ax = [1-(d2+1)/w, 1/h, d2/w, 1-2/h];
+                dpos = [-(d2+2)/w, 0, 0, 0];
+            else
                 h = d3*(d1+2);
                 w = d2+2;
                 pos_ax = [1/w, 1/h, 1-2/w, d1/h];
-                dpos = [0, (d1+2)/h, 0, 0]; 
-            end 
+                dpos = [0, (d1+2)/h, 0, 0];
+            end
             figure('papersize', [w, h] / max(w, h)*7);
-            set(gcf, 'color', 'w', ... 
+            set(gcf, 'color', 'w', ...
                 'position', [200, 200, 100*get(gcf, 'papersize')], ...
-                'paperposition', [0, 0, get(gcf, 'papersize')]); 
+                'paperposition', [0, 0, get(gcf, 'papersize')]);
             
             for m=1:d3
                 axes('position', pos_ax);
-                imagesc(ai(:, :, d3-m+1), [0, img_max]);
+                imagesc(ai(:, :, d3-m+1), vlim);
                 axis off; %equal off tight;
-                pos_ax = pos_ax + dpos; 
+                pos_ax = pos_ax + dpos;
             end
-            saveas(gcf, 'a.pdf'); 
         end
         
         %% show video
@@ -459,9 +442,24 @@ classdef MF3D < handle
                 pause(0.1);
             end
         end
+        
+        %% get the rank of the matched neuron
+        function ind_rank = get_match_rank(obj)
+            K = size(obj.A, 2);
+            ind_rank = nan(K, 1);
+            tmp_status = obj.match_status;
+            
+            for cell_id = 1:K
+                tmp_scores = obj.scores(cell_id, :);
+                [~, em_sort_id] = sort(tmp_scores, 'descend');
+                if tmp_status.status(cell_id) == 1
+                    ind_rank(cell_id) = find(em_sort_id==tmp_status.em_ids{cell_id});
+                end
+            end
+        end
+        
+        % end of methods section
     end
-    
-    
 end
 
 

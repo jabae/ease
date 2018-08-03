@@ -48,7 +48,7 @@ Y_p = Yin - (Yin*V) *V';
 
 %% iteratively update ai an dalpha 
 ci_p = ci - (ci*V) * V';
-for miter=1:4
+for miter=1:10
     % estimate ai
     ai = max(0, Y_p*ci_p' / (ci_p*ci_p'));  % ai >= 0
     

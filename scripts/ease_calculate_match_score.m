@@ -1,5 +1,5 @@
 %% show matching scores
-em_scores = scores(cell_id, :);
+em_scores = neuron.scores(cell_id, :);
 [em_sorted_scores, em_sort_id] = sort(em_scores, 'descend');
 em_rank = 1;
 

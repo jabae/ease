@@ -1,5 +1,5 @@
 function showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron)
-Y = double(Y);
+Y = double(obj.reshape(Y, 1));
 d1 = obj.options.d1;
 d2 = obj.options.d2;
 d3 = obj.options.d3;
@@ -51,7 +51,7 @@ if (nargin<3) || (isempty(min_max))
 end
 if ~exist('t_pause', 'var'); t_pause=0.01; end
 
-sort_frames = true;
+sort_frames = false;
 noise_method = 'std_res'; 
 if strcmpi(noise_method, 'std_res')
     Yres = obj.compute_residual(Y);
@@ -59,7 +59,7 @@ if strcmpi(noise_method, 'std_res')
 else
     sn = GetSn(obj.reshape(Y, 1));
 end
-b_ = obj.b./sn;
+b_ = bsxfun(@times, obj.b, 1./sn);
 b0_ = obj.b0./sn;
 A_ = bsxfun(@times, obj.A, 1./sn);
 Y = obj.reshape(Y,1);

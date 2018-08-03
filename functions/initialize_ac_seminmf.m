@@ -34,7 +34,7 @@ else
 end
 
 %% iteratively update ai an dalpha 
-for miter=1:4
+for miter=1:10
     % estimate ai
     ai = max(0, Y*ci' / (ci*ci'));  % ai >= 0
     
