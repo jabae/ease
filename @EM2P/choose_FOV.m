@@ -63,6 +63,8 @@ if show_fov
     FOV_stack_ = obj.FOV_stack;
     
     figure('papersize', [5, 5]);
+    init_fig; 
+    set(gcf, 'defaultaxesfontsize', 15); 
     axes('position', [0.01, 0.01, 0.98, 0.98]);
     fill([1, obj.dims_stack(1), obj.dims_stack(1), 1, 1], ...
         [1, 1, obj.dims_stack(2), obj.dims_stack(2), 1], ones(1,3)*0.8);

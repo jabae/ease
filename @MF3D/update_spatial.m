@@ -16,6 +16,7 @@ masks = zeros(size(obj.A_mask));
 for m=1:size(masks, 2)
     ai = obj.reshape(obj.A_mask(:, m), 3);
     ai_mask = imdilate(repmat(sum(ai, 3)>0, [1, 1, 3]), strel('square', 3));
+%     ai_mask = imdilate(ai>0, strel('square', 3));
     masks(:, m) = ai_mask(:); 
 end
 obj.A = HALS_spatial(Ysignal, obj.A, obj.C, masks, 20);
