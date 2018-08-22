@@ -17,7 +17,7 @@ for mslice = 1:ease.num_slices
     set(ease.gui.ax_slice{mslice}, 'xtick', [], 'ytick', [], 'fontsize', 14); 
     ylabel(sprintf('z=%d', z)); 
     
-    tmp_em = ease.em_ranges{z}; 
+    tmp_em = ease.em_boundary{ease.scan_id}; 
     dx = ease.em_shifts.jj(mscan, mslice); 
     dy = ease.em_shifts.ii(mscan, mslice); 
     if ~isempty(tmp_em)

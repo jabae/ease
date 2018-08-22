@@ -14,10 +14,10 @@ for m=1:ease.num_slices
     set(ease.gui.ax_em{m}, 'xtick', [], 'ytick',[]);
     hold(ease.gui.ax_em{m}, 'on');
     
-    z = ease.video_zvals_updated(ease.scan_id, mslice);
+    z = ease.video_zvals_updated(ease.scan_id, m);
     dx = ease.em_shifts.jj(ease.scan_id, m);
     dy = ease.em_shifts.ii(ease.scan_id, m);
-    tmp_em = ease.em_ranges{z};
+    tmp_em = ease.em_boundary{ease.scan_id};
     
     if ~isempty(tmp_em)
         xi = (tmp_em(:,2)-ease.FOV_stack(3)-dx)/ssub;

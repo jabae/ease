@@ -41,7 +41,7 @@ for m=1:ease.num_slices
     axis off tight;
     hold on;
     
-    tmp_em = ease.em_ranges{z};
+    tmp_em = ease.em_boundary{ease.scan_id};
     
     if ~isempty(tmp_em)
         xi = (tmp_em(:,2)-ease.FOV_stack(3)-dx)/ssub;
@@ -56,6 +56,9 @@ end
 
 %% matching status
 tmp_status = neuron.match_status;
+%show confidence score 
+set(ease.gui.edit_confidence, 'string', ...
+    int2str(tmp_status.confidence(cell_id))); 
 if tmp_status.status(cell_id) == -1
     col_status = {ease.gui.color_gray, ease.gui.color_gray, ease.gui.color_gray, 'red'};
 elseif tmp_status.status(cell_id) == 0
@@ -71,3 +74,4 @@ set(ease.gui.btn_em_ignore, 'backgroundcolor', col_status{3});
 
 %% run matching neurons
 ease_calculate_match_score;
+

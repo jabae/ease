@@ -1,4 +1,4 @@
-function showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron)
+function showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron, rot_info)
 Y = double(obj.reshape(Y, 1));
 d1 = obj.options.d1;
 d2 = obj.options.d2;
@@ -8,9 +8,15 @@ nr = 6;
 if ~exist('ind_neuron', 'var') || isempty(ind_neuron)
     ind_neuron = 1:size(obj.A, 2);
 end
-rot_angle = 6.5;
-rot_xlim = [13, 125];
-rot_ylim = [32, 51];
+if ~exist('rot_info', 'var') 
+    rot_angle = 6.5;
+    rot_xlim = [13, 125];
+    rot_ylim = [32, 51];
+else
+    rot_angle = rot_info.rot_angle;
+    rot_xlim = rot_info.rot_xlim;
+    rot_ylim = rot_info.rot_ylim;
+end
 rot_flag = true;
 if rot_flag
     img_width = diff(rot_xlim);

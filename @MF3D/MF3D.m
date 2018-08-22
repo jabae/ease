@@ -25,9 +25,10 @@ classdef MF3D < handle
         Fs = nan;    % frame rate
         file = '';
         frame_range;  % frame range of the data
+        spatial_range; % spatial area to be processed 
         %quality control
         ids;        % unique identifier for each neuron
-        match_status = struct('status', [], 'em_ids', []);  % the status of neuron matching. It's a struct variable with two fields:
+        match_status = struct('status', [], 'em_ids', [], 'confidence', []);  % the status of neuron matching. It's a struct variable with two fields:
         %  status: an array indicating the status for each neuron
         % -1: no match because the neuron is outsize of EM volume
         % 0: all EM segments are potential matches
@@ -131,6 +132,7 @@ classdef MF3D < handle
             if ~isempty(obj.match_status.status)
                 obj.match_status.status(ind) = [];
                 obj.match_status.em_ids(ind) = [];
+                obj.match_status.confidence(ind) = [];
             end
             
             % save the log
@@ -138,7 +140,7 @@ classdef MF3D < handle
         
         
         %% view neurons
-        showNeuron(obj, ind, orientation); 
+        showNeuron(obj, ind, orientation);
         
         %% determine spatial support
         Amask = determine_spatial_support(obj);
@@ -160,7 +162,7 @@ classdef MF3D < handle
         end
         
         %% play movie of demixing
-        showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron);
+        showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron, rot_info);
         showDenoised(obj, min_max, col_map, avi_nm, t_pause);
         
         %% play movie
@@ -276,8 +278,7 @@ classdef MF3D < handle
         end
         
         %% initialization given EM masks
-        ind_voxels_em = initialize_em(obj, Aem, Y, Kmax, options);
-        ind_voxels_em = initialize_all(obj, Aem, Y, Kmax, options);
+        ind_voxels_em = initialize_em(obj, Aem, Y, options);
         
         %% deconvolve all temporal components
         C_ = deconvTemporal(obj, use_parallel, method_noise)
@@ -354,7 +355,7 @@ classdef MF3D < handle
         
         %% normalize data
         function [Y, Y_sn] = normalize_data(obj, Y, update_var)
-            Y = obj.reshape(Y,1);
+            Y = double(obj.reshape(Y,1));
             Y_sn = GetSn(bsxfun(@minus, Y, mean(Y, 2)));
             Y = bsxfun(@times, Y, 1./Y_sn);
             
@@ -388,18 +389,23 @@ classdef MF3D < handle
         
         %% show image
         function showImage(obj, ai, orientation, vlim)
-            if numel(ai) == 1
-                ai = obj.reshape(obj.A(:, ai), 3);
-            elseif ndims(ai) ~=3
-                ai = obj.reshape(ai, 3);
+            if iscell(ai)  % images one each plane are elements of the cell array
+                [d1, d2, ~] = size(ai{1});
+                d3 = length(ai);
+            else   %
+                if numel(ai) == 1
+                    ai = obj.reshape(obj.A(:, ai), 3);
+                elseif ndims(ai) ~=3
+                    ai = obj.reshape(ai, 3);
+                end
+                [d1, d2, d3] = size(ai);
+                img_max = max(ai(:))*0.8;
+                if ~exist('vlim', 'var') || isempty(vlim)
+                    vlim = [0, img_max];
+                end
             end
             if ~exist('orientation', 'var') || isempty(orientation)
                 orientation = 'vertical';
-            end
-            [d1, d2, d3] = size(ai);
-            img_max = max(ai(:))*0.8;
-            if ~exist('vlim', 'var') || isempty(vlim)
-                vlim = [0, img_max];
             end
             if strcmpi(orientation, 'horizental')
                 h = d1+2;
@@ -419,7 +425,11 @@ classdef MF3D < handle
             
             for m=1:d3
                 axes('position', pos_ax);
-                imagesc(ai(:, :, d3-m+1), vlim);
+                if iscell(ai)
+                    image(ai{m});
+                else
+                    imagesc(ai(:, :, d3-m+1), vlim);
+                end
                 axis off; %equal off tight;
                 pos_ax = pos_ax + dpos;
             end
@@ -458,7 +468,80 @@ classdef MF3D < handle
             end
         end
         
+        %% export results
+        function results = export_results(obj, em_ids, output_path)
+            ind = find(obj.match_status.status==1);
+            results.A = obj.reshape(obj.A(:, ind), 3);
+            results.A_mask = obj.reshape(obj.A_mask(:, ind), 3);
+            results.C_raw = obj.C_raw(ind, :);
+            results.C = obj.C(ind, :);
+            results.S = obj.S(ind, :);
+            tmp_ids = cell2mat(obj.match_status.em_ids(ind));
+            results.EM_IDs = em_ids(tmp_ids, 1);
+            results.confidence = obj.match_status.confidence;
+            results.deconv_options = obj.options.deconv_options;
+            if exist('output_path', 'var')
+                save(output_path, 'results');
+            end
+        end
         % end of methods section
+        
+        %% fuse neurons' spatial footprints for visualizing them together
+        function img = overlap_neurons(obj, ind, var_name)
+            if ~exist('var_name', 'var') || isempty(var_name)
+                var_name = 'A';
+            end
+            K = size(obj.A, 2);
+            if ~exist('ind', 'var') || isempty(ind)
+                ind = 1:K;  %#ok<NASGU>
+            end
+            
+            % extract neurons to be visualized.
+            A_ = obj.reshape(eval(sprintf('obj.%s(:, ind)', var_name)), 1);
+            
+            % fuse them
+            d3 = obj.options.d3;
+            img = cell(obj.options.d3, 1);
+            a1 = obj.reshape(A_(:, 1), 3);
+            a2 = obj.reshape(A_(:, 2), 3);
+            for m=1:d3
+                % plane by plane
+                img1 = a1(:, :, m);
+                img2 = a2(:, :, m);
+                img{m} = imfuse(img1, img2);
+            end
+        end
+        
+        %% compress results 
+        function compress(obj, k_score)
+           obj.A = sparse(obj.A); 
+           obj.A_mask = sparse(obj.A_mask); 
+           obj.S = sparse(obj.S); 
+           [K_2p, K_em] = size(obj.scores); 
+           if ~exist('k_score', 'var') || isempty(k_score)
+               % keep the top 100 matches 
+               k_score = min(100, K_em); 
+           end 
+           if size(obj.A, 2) == K_2p
+               x = obj.scores; 
+               z = quantile(x, 1-k_score/K_em, 2);
+               x(bsxfun(@lt, x, z)) = 0; 
+               obj.scores = sparse(full(x)); 
+           end
+        end
+        
+        %% reset the class object and clear results 
+        function obj = reset(obj)
+            neuron = MF3D(); 
+            neuron.options = obj.options; 
+            neuron.dataloader = obj.dataloader; 
+            neuron.dataloader_denoised = obj.dataloader_denoised; 
+            neuron.dataloader_raw = obj.dataloader_raw; 
+            neuron.Fs = obj.Fs; 
+            neuron.frame_range = obj.frame_range; 
+            neuron.spatial_range = obj.spatial_range; 
+            obj = neuron.copy(); 
+        end
     end
 end
 

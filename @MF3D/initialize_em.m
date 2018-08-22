@@ -1,4 +1,4 @@
-function ind_voxels_em = initialize_em(obj, Aem, Y, Kmax, options)
+function ind_voxels_em = initialize_em(obj, Aem, Y, options)
 %% initialize A & C in the CNMF model using spatial masks given by EM segments.
 %{
     This function is used for initializing neurons given a pool of spatial
@@ -9,7 +9,6 @@ function ind_voxels_em = initialize_em(obj, Aem, Y, Kmax, options)
 %{
     Aem: d_em * K_em matrix, spatial footprints given by EM segments
     Y: d * T, data
-    Kmax: integer, the maximum number of neurons to be initialized.
     options: struct variable for containing all options 
 %}
 
@@ -38,6 +37,7 @@ if ~exist('options', 'var') || isempty(options)
     save_fig = true;
     show_fig = true; 
     K_candidate = 3000;
+    K_new = 50; 
 else
     init_method = options.init_method;
     order_statistics = options.order_statistics;
@@ -46,11 +46,12 @@ else
     save_fig = options.save_fig;
     show_fig = options.show_fig; 
     K_candidate = options.K_candidate;
+    K_new = options.K_new; 
 end
 
-if ~exist('Kmax', 'var')    % number of neurons to be initialized 
-    Kmax = 50;
-end
+% if ~exist('K_new', 'var')    % number of neurons to be initialized 
+%     K_new = 50;
+% end
 
 ind_voxels_em = sparse(sum(Aem, 2)>0);     % find voxels within EM volumes
 Aem_sum = sum(Aem, 1);          % l1 norm of each ai_em
@@ -84,12 +85,19 @@ end
 
 if clear_results
     Y = obj.reshape(Y,1);
+    obj.A = []; 
+    obj.C = []; 
     obj.update_background(Y);
     Y = obj.reshape(Y,1) - obj.b*obj.f;
 else
     Y = obj.reshape(Y, 1) - obj.A*obj.C - obj.b*obj.f;
 end
 
+%% get the spatial range 
+spatial_range = obj.spatial_range; 
+if ~isempty(spatial_range)
+    Y(~spatial_range, :) = 0; % remove pixels outside of the EM volume 
+end
 %% center data and remove the background
 Y = bsxfun(@minus, Y, mean(Y, 2));
 
@@ -98,24 +106,26 @@ Y = bsxfun(@minus, Y, mean(Y, 2));
 
 if clear_results
     K_pre = 0;
-    obj.A = zeros(d, Kmax);
-    obj.A_mask = zeros(d, Kmax);
-    obj.C = zeros(Kmax, T);
-    obj.C_raw = zeros(Kmax, T);
-    obj.S = zeros(Kmax, T);
-    obj.ids((end+1):(end+Kmax)) = 0;
-    obj.match_status.status = zeros(1, Kmax);
-    obj.match_status.em_ids = cell(1, Kmax);
+    obj.A = zeros(d, K_new);
+    obj.A_mask = zeros(d, K_new);
+    obj.C = zeros(K_new, T);
+    obj.C_raw = zeros(K_new, T);
+    obj.S = zeros(K_new, T);
+    obj.ids((end+1):(end+K_new)) = 0;
+    obj.match_status.status = zeros(1, K_new);
+    obj.match_status.em_ids = cell(1, K_new);
+    obj.match_status.confidence = ones(1, K_new)*5;
 else
     K_pre = size(obj.A, 2);     % number of existing neurons
-    obj.A = [obj.A, zeros(d, Kmax)];
-    obj.A_mask = [obj.A_mask, zeros(d, Kmax)];
-    obj.C = [obj.C; zeros(Kmax, T)];
-    obj.C_raw = [obj.C_raw; zeros(Kmax, T)];
-    obj.S = [obj.S; zeros(Kmax, T)];
-    obj.ids((end+1):(end+Kmax)) = 0;
-    obj.match_status.status((end+1):(end+Kmax)) = 0;
-    obj.match_status.em_ids = [obj.match_status.em_ids, cell(1, Kmax)];
+    obj.A = [obj.A, zeros(d, K_new)];
+    obj.A_mask = [obj.A_mask, zeros(d, K_new)];
+    obj.C = [obj.C; zeros(K_new, T)];
+    obj.C_raw = [obj.C_raw; zeros(K_new, T)];
+    obj.S = [obj.S; zeros(K_new, T)];
+    obj.ids((end+1):(end+K_new)) = 0;
+    obj.match_status.status((end+1):(end+K_new)) = 0;
+    obj.match_status.confidence((end+1):(end+K_new)) = 5;
+    obj.match_status.em_ids = [obj.match_status.em_ids, cell(1, K_new)];
 end
 k_new = K_pre;
 k_tried = 0;
@@ -123,7 +133,8 @@ ind_ignore = false(1, size(A_, 2));
 ind_used = ind_ignore;
 
 %% estimate temporal traces for each EM
-C_ = A_' * Y;
+tsub = 4; 
+C_ = A_' * Y(:, 1:tsub:end);
 switch lower(order_statistics)
     case 'skewness'
         % skewness of each C
@@ -147,7 +158,7 @@ end
 %% start initialization 
 deconv_options = obj.options.deconv_options;
 
-while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
+while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
     %% find the best components
     cc(ind_ignore) = 0; 
     cc(ind_used) = 0;
@@ -158,7 +169,7 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
     %% extract the corresponding EM segment ai and ci
     ai = obj.reshape(A_(:, ind_max), 3);
     ai_mask = imdilate(ai>0, strel('square', 4)); %imdilate(repmat(sum(ai, 3)>0, [1, 1, 3]), strel('square', 3));
-    ci = C_(ind_max, :); 
+    ci = reshape(ai, 1, []) * Y; %C_(ind_max, :); 
     
     if show_fig
         clf; 
@@ -194,7 +205,7 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
         tmp_ci = ci_new - mean(ci_new);
         ai_proj = (Y * tmp_ci')/(tmp_ci*tmp_ci'); %.*(ai(:)>0);
         ai_proj = obj.reshape(ai_proj, 3);
-    elseif strcmpi(init_method, 'iteration')
+    else%if strcmpi(init_method, 'semi-nmf')
         ci_new = deconvolveCa(ci, deconv_options, 'sn', mad(ci));
         ai = reshape(ai, [], 1);
         ind_mask = reshape(ai_mask>0, [], 1);
@@ -244,7 +255,7 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
     end
     
     %% quality control
-    if sum(ai_new(:).*ai(:))/norm(ai_new(:), 2) < min_similarity
+    if sum(ai_new(:).*ai(:))/norm(ai_new(ai>0), 2) < min_similarity
         ind_ignore(ind_max) = true;
         cc(ind_max) = 0;
         display('hmmm, try next');
@@ -269,11 +280,12 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
     obj.A_mask(:, k_new) = ai(:);
     obj.ids(k_new) = em_ids(ind_max);
     obj.match_status.status(k_new) = 1;
+    obj.match_status.confidence(k_new) = 5;
     obj.match_status.em_ids{k_new} = em_ids(ind_max);
     ind_used(ind_max) = true;
     fprintf('\t %d\n', k_new);
     
-    %% subtract this components and compute correlation image
+    %% subtract this components 
     ci_new = reshape(ci_new, 1, []);
     ci_new = ci_new - mean(ci_new);
     Y = Y - reshape(ai_new, [], 1) * ci_new;
@@ -291,7 +303,7 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
     end
     
     %% update C and cc
-    C_ = C_ - A_' * reshape(ai_new, [], 1) * reshape(ci_new, 1, []);
+    C_ = C_ - A_' * reshape(ai_new, [], 1) * reshape(ci_new(1:tsub:end), 1, []);
     switch lower(order_statistics)
         case 'skewness'
             % skewness of each C
@@ -306,14 +318,14 @@ while (k_new < Kmax+K_pre) && (k_tried<size(A_,2))
     end
     
     pause(0.1);
-    if mod(k_new, 20)==0
-        % update background
-        tmpY = Y + obj.b*obj.f;
-        [u, s, v] = svdsecon(tmpY, 1);
-        obj.b = u;
-        obj.f = s*v';
-        Y = tmpY - u*s*v';
-        ind_ignore = false(size(ind_ignore));
-    end
+%     if mod(k_new, 50)==0
+%         % update background
+%         tmpY = Y + obj.b*obj.f;
+%         [u, s, v] = svdsecon(tmpY, 1);
+%         obj.b = u;
+%         obj.f = s*v';
+%         Y = tmpY - u*s*v';
+%         ind_ignore = false(size(ind_ignore));
+%     end
     
 end

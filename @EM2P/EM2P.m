@@ -82,6 +82,7 @@ classdef EM2P < handle
         em_load_flag = true;
         em_zblur = 6;          % the projection of each EM semgent onto one slice takes the nearby (-blur_size:blur_size) planes
         PACK_SIZE = 64;     % pack size for compressing binary vectors.
+        em_boundary = [];   % EM boundaries
         
         % method for computing the matching scores
         score_method = 'corr' ;
@@ -131,10 +132,10 @@ classdef EM2P < handle
         align_video_stack(obj);
         
         %% extract EM volumes given the scan ID
-        Aem_proj = extract_em_segments(obj, mscan, mslice);
+        Aem_proj = extract_em_segments(obj, mscan, mslice, ssub);
         
         %% get EM masks in a specified scan ID
-        Aem = get_Aem_scan(obj, mscan);
+        Aem = get_Aem_scan(obj, mscan, ssub);
         
         %% create/load neuron objects for all video data
         neuron = get_MF3D(obj, T, create_new);
@@ -143,7 +144,7 @@ classdef EM2P < handle
         summary_images = calculate_summary_images(obj, mscan, mblock)
         
         %% load video data into memory
-        neuron = load_video_mem(obj, mscan, mblock);
+        neuron = load_video_mem(obj, mscan, mblock, create_new);
         
         %% create masks for EM volumes
         get_em_masks(obj);
@@ -163,6 +164,25 @@ classdef EM2P < handle
         %% load the projection of Aem onto the 2p stack 
         Aem_proj = project_em_to_stack(obj); 
 
+        %% update initialization options 
+        update_init_options(obj); 
+        
+        %% get EM boundaries
+        function get_em_boundaries(obj)
+            for mscan=1:obj.num_scans
+                zs = obj.video_zvals_updated(mscan, :);
+                temp = obj.em_data.em_ranges; 
+                em_volume = cell2mat(temp(zs));
+                if ~isempty(em_volume)
+                    k = convhull(em_volume(:, 2), em_volume(:, 1));
+                    obj.em_boundary{mscan} = em_volume(k, :);
+                else
+                    obj.em_boundary{mscan} = []; 
+                end
+            end
+        end
+        
+    
     end
     
     
