@@ -68,6 +68,7 @@ end
 var_name = sprintf('scan%d_slice%d', mscan, mslice);
 zplane = obj.video_zvals_updated(mscan, mslice);    % current planes
 
+warning('off', 'MATLAB:load:variableNotFound'); 
 if flag_processed(mscan, mslice)
     fprintf('plane: scan=%d, slice=%d, z=%d...\n', mscan, mslice, zplane);
  
@@ -82,6 +83,7 @@ if flag_processed(mscan, mslice)
             temp = load(matfile_proj, var_name_ds);  %#ok<NASGU>
             Aem_proj = eval(sprintf('temp.%s', var_name_ds));
         catch
+            fprintf('downsampling......\n'); 
             temp = load(matfile_proj, var_name);  %#ok<NASGU>
             Aem = eval(sprintf('temp.%s', var_name));
             

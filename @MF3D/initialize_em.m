@@ -79,8 +79,14 @@ end
 
 %% load data
 if ~exist('Y', 'var') || isempty(Y)
-    dl = obj.dataloader_denoised;
-    Y = dl.load_tzrc();
+    if isempty(obj.frame_range)
+        Y = evalin('base', 'Y_cnmf');
+    else
+        temp = obj.frame_range;
+        Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+    end
+    %     dl = obj.dataloader_denoised;
+    %     Y = dl.load_tzrc();
 end
 
 if clear_results

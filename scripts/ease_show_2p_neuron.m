@@ -18,8 +18,8 @@ else
 end
 axis tight;
 
-
 %% show spatial components
+ssub = ease.ssub; 
 ai = neuron.reshape(neuron.A(:, cell_id), 3);
 if ~isempty(neuron.A_corr)
     ai_corr = neuron.reshape(neuron.A_corr(:, cell_id), 3);

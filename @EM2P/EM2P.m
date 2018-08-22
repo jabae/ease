@@ -42,6 +42,7 @@ classdef EM2P < handle
         FOV_stack = [];
         aligned_images = [];      % overlap of stack images and mean of video images to show the performances of alignment
         align_max_zshift = 8;     %
+        ssub = 2;       % downsampling factor between stack data and video data 
         
         % data information
         num_scans = 8;          % number of total scans

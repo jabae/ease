@@ -27,13 +27,14 @@ end
 set(ease.gui.ax_score, 'ylim',[0, max(em_scores*1.1)], 'xlim', [0, em_rank+20]);
 
 %% generate the EM masks
-ai_em = zeros(ease.d1, ease.d2, ease.num_slices);
-ssub = ease.dims_stack(1) / ease.dims_video(1); 
-for m=1:ease.num_slices
-    temp = Aem{m}(:, em_id);
-    temp = reshape(temp, ease.d1*ssub, ease.d2*ssub);
-    ai_em(:, :, m) = imresize(full(temp), [ease.d1, ease.d2], 'box');
-end
+% ai_em = zeros(ease.d1, ease.d2, ease.num_slices);
+% ssub = ease.dims_stack(1) / ease.dims_video(1); 
+% for m=1:ease.num_slices
+%     temp = Aem{m}(:, em_id);
+%     temp = reshape(temp, ease.d1*ssub, ease.d2*ssub);
+%     ai_em(:, :, m) = imresize(full(temp), [ease.d1, ease.d2], 'box');
+% end
+ai_em = neuron.reshape(Aem(:, em_id), 3); 
 
 %% merge
 img_em_ca = zeros(ease.d1, ease.d2, ease.num_slices);

@@ -9,6 +9,11 @@ addpath(fullfile(EASE_dir, 'GUI'));
 addpath(fullfile(EASE_dir, 'GUI', 'callbacks'));
 addpath(fullfile(EASE_dir, 'functions'));
 
+% addpath(genpath(fullfile(EASE_dir, 'packages', 'microns_phase1_nda')));
+% addpath(genpath(fullfile(EASE_dir, 'packages', 'pipeline', 'matlab')));
+% addpath(genpath(fullfile(EASE_dir, 'packages', 'ta3')));
+% addpath(genpath(fullfile(EASE_dir, 'packages', 'polygon2voxel')));
+
 %% setup imaging data loader 
 if isempty(which('IDL.m'))
     try

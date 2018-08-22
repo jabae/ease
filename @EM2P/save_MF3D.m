@@ -11,7 +11,7 @@ matfile_mf3d = fullfile(obj.output_folder, ...
     FOV_(1), FOV_(2), FOV_(3), FOV_(4)));
 
 if mblock==0
-    var_name = sprintf('neuron_scan%d_all_block', mscan);
+    var_name = sprintf('neuron_scan%d_all_blocks', mscan);
 else
     var_name = sprintf('neuron_scan%d_block%d', mscan, mblock);
 end

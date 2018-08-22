@@ -33,7 +33,7 @@ if ~exist('create_new', 'var')
     create_new = false;
 end
 if mblock==0
-    var_name = sprintf('neuron_scan%d_all_block', mscan);
+    var_name = sprintf('neuron_scan%d_all_blocks', mscan);
 else
     var_name = sprintf('neuron_scan%d_block%d', mscan, mblock);
 end
@@ -69,8 +69,8 @@ end
 neuron = MF3D('d1', obj.d1, 'd2', obj.d2, 'd3', obj.d3,...
     'se', strel(ones(3,3,3)), 'search_method', 'dilate');
 neuron.Fs = obj.video_Fs;
-[dl_Yr, dl_Yd] = obj.create_dataloader(mscan, mblock, T);
 if mblock>0
+    [dl_Yr, dl_Yd] = obj.create_dataloader(mscan, mblock, T);
     % dataloader for single blocks
     neuron.dataloader_denoised = dl_Yd;
     neuron.dataloader_raw = dl_Yr;
@@ -79,10 +79,14 @@ if mblock>0
     else
         neuron.dataloader = neuron.dataloader_raw;
     end
+    %% save the results
+    flag_created(mscan, mblock) = true; %#ok<NASGU>
+    eval(sprintf('%s = neuron;', var_name));
+    save(matfile_mf3d, var_name, 'flag_created', '-append');
+else
+    eval(sprintf('%s = neuron;', var_name));
+    save(matfile_mf3d, var_name, '-append'); 
 end
 
-%% save the results
-flag_created(mscan, mblock) = true; %#ok<NASGU>
-eval(sprintf('%s = neuron;', var_name));
-save(matfile_mf3d, var_name, 'flag_created', '-append');
+
 end
