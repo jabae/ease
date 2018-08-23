@@ -47,7 +47,7 @@ if exist('thresho_outlier', 'var')
 end
 
 Bf_center = bsxfun(@minus, Bf, mean(Bf, 2)); 
-tsub = max(1, floor(size(Bf_center, 2)/1000)); 
+tsub = max(1, floor(size(Bf_center, 2)/3000)); 
 [u, ~, ~] = svdsecon(Bf_center(:, 1:tsub:end), nb); 
 % [u, s, v] = rsvd(bsxfun(@minus, Bf, mean(Bf, 2)), nb); 
 b = u(ind_patch, :); 

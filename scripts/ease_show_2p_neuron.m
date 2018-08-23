@@ -57,8 +57,8 @@ end
 %% matching status
 tmp_status = neuron.match_status;
 %show confidence score 
-set(ease.gui.edit_confidence, 'string', ...
-    int2str(tmp_status.confidence(cell_id))); 
+cb_btn_rate; 
+cb_btn_label; 
 if tmp_status.status(cell_id) == -1
     col_status = {ease.gui.color_gray, ease.gui.color_gray, ease.gui.color_gray, 'red'};
 elseif tmp_status.status(cell_id) == 0

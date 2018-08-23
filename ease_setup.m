@@ -38,3 +38,6 @@ end
 
 %% install YAML-matlab 
 addpath(fullfile(EASE_dir, '..', 'yamlmatlab')); 
+
+%% warning off 
+warning('off', 'MATLAB:dispatcher:UnresolvedFunctionHandle'); 

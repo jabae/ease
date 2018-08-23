@@ -28,7 +28,8 @@ classdef MF3D < handle
         spatial_range; % spatial area to be processed 
         %quality control
         ids;        % unique identifier for each neuron
-        match_status = struct('status', [], 'em_ids', [], 'confidence', []);  % the status of neuron matching. It's a struct variable with two fields:
+        match_status = struct('status', [], 'em_ids', [], 'confidence', ...
+            []);  % the status of neuron matching. It's a struct variable with two fields:
         %  status: an array indicating the status for each neuron
         % -1: no match because the neuron is outsize of EM volume
         % 0: all EM segments are potential matches
@@ -42,6 +43,7 @@ classdef MF3D < handle
         % status = 1, it's a scalar storing the matching ID
         % status = n, it's an array of all EM IDs
         
+        labels = [];   % label the neuron as soma(1) or dendrite(2)
         tags;       % tags bad neurons with multiple criterion using a 16 bits number
         % ai indicates the bit value of the ith digits from
         % right to the left
@@ -194,6 +196,14 @@ classdef MF3D < handle
             if ~exist('type', 'var') || isempty(type)
                 type = 'residual';
             end
+            if ~exist('Yr', 'var') || isempty(Yr)
+                if isempty(obj.frame_range)
+                    Yr = evalin('base', 'Y_cnmf');
+                else
+                    temp = obj.frame_range;
+                    Yr = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+                end
+            end
             if strcmpi(type, 'residual')
                 Yres = obj.reshape(Yr, 1) - obj.A*obj.C - obj.b*obj.f;
                 Yres = bsxfun(@minus, Yres, mean(Yres, 2));
@@ -285,6 +295,21 @@ classdef MF3D < handle
         
         %% run HALS
         function hals(obj, Y)
+            if ~exist('Y', 'var') || isempty(Y)
+                if isempty(obj.frame_range)
+                    Y = evalin('base', 'Y_cnmf');
+                else
+                    temp = obj.frame_range;
+                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+                end
+            end
+            %% get the spatial range
+            ind = obj.spatial_range;
+            if ~isempty(ind)
+                Y(~ind, :) = 0; % remove pixels outside of the EM volume
+            end
+            
+            %% run HALS 
             obj.update_temporal(Y, false, true);
             obj.update_spatial(Y);
             obj.update_background(Y);

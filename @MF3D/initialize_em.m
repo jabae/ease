@@ -93,6 +93,7 @@ if clear_results
     Y = obj.reshape(Y,1);
     obj.A = []; 
     obj.C = []; 
+    obj.labels = []; 
     obj.update_background(Y);
     Y = obj.reshape(Y,1) - obj.b*obj.f;
 else
@@ -117,7 +118,8 @@ if clear_results
     obj.C = zeros(K_new, T);
     obj.C_raw = zeros(K_new, T);
     obj.S = zeros(K_new, T);
-    obj.ids((end+1):(end+K_new)) = 0;
+    obj.labels = zeros(K_new,1); 
+    obj.ids = zeros(K_new, 1);
     obj.match_status.status = zeros(1, K_new);
     obj.match_status.em_ids = cell(1, K_new);
     obj.match_status.confidence = ones(1, K_new)*5;
@@ -129,6 +131,7 @@ else
     obj.C_raw = [obj.C_raw; zeros(K_new, T)];
     obj.S = [obj.S; zeros(K_new, T)];
     obj.ids((end+1):(end+K_new)) = 0;
+    obj.labels((end+1):(end+K_new)) = 0;
     obj.match_status.status((end+1):(end+K_new)) = 0;
     obj.match_status.confidence((end+1):(end+K_new)) = 5;
     obj.match_status.em_ids = [obj.match_status.em_ids, cell(1, K_new)];
@@ -264,7 +267,7 @@ while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
     if sum(ai_new(:).*ai(:))/norm(ai_new(ai>0), 2) < min_similarity
         ind_ignore(ind_max) = true;
         cc(ind_max) = 0;
-        display('hmmm, try next');
+        fprintf('hmmm, try next');
         if save_fig
             saveas(gcf, fullfile(output_folder, sprintf('delete_%d.pdf', k_tried)));
         end

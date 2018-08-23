@@ -159,11 +159,11 @@ else
     
     % downsample data 
     if ssub > 1
-        temp = reshape(Aem_proj, d1_2p, d2_2p, []);
-        temp = imresize(temp, [d1_2p/ssub, d2/ssub], 'box');
+        temp = reshape(full(Aem_proj), d1_2p, d2_2p, []);
+        temp = imresize(temp, [d1_2p/ssub, d2_2p/ssub], 'box');
         Aem_ds = reshape(temp, [], obj.K_em); 
         var_name_ds = sprintf('%s_ds%d', var_name, ssub);
-        eval(sprintf('%s=Aem_ds;', var_name_ds));
+        eval(sprintf('%s=sparse(Aem_ds);', var_name_ds));
         save(matfile_proj, var_name, var_name_ds, 'flag_processed','-append');
         Aem_proj = Aem_ds; 
     else

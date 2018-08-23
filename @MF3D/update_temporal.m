@@ -16,12 +16,25 @@ if ~exist('allow_deletion', 'var') || isempty(allow_deletion)
     allow_deletion = false;
 end
 if ~exist('weight_em', 'var') || isempty(weight_em)
-    weight_em = 'false'; 
+    weight_em = 'false';
+end
+if ~exist('Y', 'var') || isempty(Y)
+    if isempty(obj.frame_range)
+        Y = evalin('base', 'Y_cnmf');
+    else
+        temp = obj.frame_range;
+        Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+    end
 end
 
-Y = obj.reshape(Y,1); 
-Ymean = mean(Y, 2); 
-Y = Y - obj.reconstruct_background(); 
+Y = obj.reshape(Y,1);
+%% get the spatial range
+ind = obj.spatial_range;
+if ~isempty(ind)
+    Y(~ind, :) = 0; % remove pixels outside of the EM volume
+end
+Ymean = mean(Y, 2);
+Y = Y - obj.reconstruct_background();
 
 %% initialization
 A = obj.A;
@@ -58,15 +71,15 @@ for miter=1:maxIter
         end
         temp = C(k, :) + (U(k, :)-V(k, :)*C)/aa(k);
         %remove baseline and estimate noise level
-%         [b_hist, sn_hist] = estimate_baseline_noise(temp);
+        %         [b_hist, sn_hist] = estimate_baseline_noise(temp);
         b = mean(temp(temp<median(temp)));
         sn_psd = GetSn(temp);
-%         if sn_psd<sn_hist
-            tmp_sn = sn_psd;
-%         else
-%             tmp_sn = sn_hist;
-%             b = b_hist;
-%         end
+        %         if sn_psd<sn_hist
+        tmp_sn = sn_psd;
+        %         else
+        %             tmp_sn = sn_hist;
+        %             b = b_hist;
+        %         end
         
         temp = temp -b;
         sn(k) = tmp_sn;
@@ -76,7 +89,7 @@ for miter=1:maxIter
             [ck, sk, deconv_options]= deconvolveCa(temp, deconv_options_0, 'maxIter', 2, 'sn', tmp_sn);
             smin(k) = deconv_options.smin;
             kernel_pars{k} = reshape(deconv_options.pars, 1, []);
-            temp = temp - deconv_options.b; 
+            temp = temp - deconv_options.b;
         else
             if maxIter>2
                 ck = threshold_ci(temp, 3);
@@ -109,7 +122,7 @@ obj.S = bsxfun(@times, S, 1./sn');
 obj.P.kernel_pars =cell2mat( kernel_pars);
 obj.P.smin = smin/sn;
 obj.P.sn_neuron = sn;
-obj.b0 = Ymean - obj.A * mean(obj.C, 2); 
+obj.b0 = Ymean - obj.A * mean(obj.C, 2);
 if allow_deletion
     obj.delete(ind_del);
 end
