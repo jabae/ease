@@ -36,7 +36,7 @@ if ~exist('mscan', 'var') || isempty(mscan)
 else
     obj.scan_id = mscan;
 end
-if ~exist('mblock', 'var') || isempty(mscan)
+if ~exist('mblock', 'var') || isempty(mblock)
     mblock = obj.block_id;
 else
     obj.block_id = mblock;

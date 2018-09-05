@@ -205,7 +205,7 @@ while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
         Yout = Y(ind_out(:), :);
         ci0 = ci;
         ai_new = double(ind_in);
-        [ai_new(ind_in), ci_new] = initialize_ac_tf(Yin, Yout, ai(ind_in(:)), ci0, 10);
+        [ai_new(ind_in), ci_new] = initialize_ac_tf(Yin, Yout, ai(ind_in(:)), ci0, 15);
         [~, sn] = estimate_baseline_noise(ci_new);
         ci_new_raw = ci_new; 
         ci_new = deconvolveCa(ci_new, deconv_options, 'sn', sn);
@@ -227,19 +227,17 @@ while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
             ci_new = reshape(ci_new, 1, []) - mean(ci_new);
             ai_proj = (Y * ci_new')/(ci_new * ci_new'); %.*(ai(:)>0);
             ai_new = max(0, ai_proj.*ind_mask);
-%             ai_new = ai_new / norm(ai_new, 2);
             
             %% refine ci
             ci_new = ((ai_new.*ai)' * Y) / ((ai_new.*ai)'*ai_new);
             ci_new_raw = ci_new; 
             ci_new = deconvolveCa(ci_new, deconv_options, 'sn', mad(ci_new));
         end
-        if std(ci_new) ==0
-            ind_ignore(ind_max) = true;
-            continue;
-        end
     end
-    
+    if std(ci_new(2:end)) ==0
+        ind_ignore(ind_max) = true;
+        continue;
+    end
     %% show initialized components 
     if show_fig
         
@@ -326,15 +324,5 @@ while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
             cc = skewness(C_, 0, 2);
     end
     
-    pause(0.1);
-%     if mod(k_new, 50)==0
-%         % update background
-%         tmpY = Y + obj.b*obj.f;
-%         [u, s, v] = svdsecon(tmpY, 1);
-%         obj.b = u;
-%         obj.f = s*v';
-%         Y = tmpY - u*s*v';
-%         ind_ignore = false(size(ind_ignore));
-%     end
-    
+    pause(0.1);    
 end

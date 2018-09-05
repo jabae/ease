@@ -1,4 +1,45 @@
-function showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron, rot_info)
+function showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron, rot_info, fig_visible)
+%% show results of running EASE
+%{
+    show videos of the following data:
+    row 1: raw video
+    row 2: background video
+    row 3: background-subtracted video
+    row 4: denoised video (A*C)
+    row 5: residual
+    row 6: demixing video (A*C). each neuron has its own pesudocolor
+%}
+
+%% inputs:
+%{
+    Y: video data
+    col_mat: colormap to show video
+    avi_nm: name of the saved avi file
+    t_pause:
+    ind_neuron: indices of neurons to be shown
+    rot_info: rotation information
+%}
+
+%% outputs:
+%{
+%}
+
+%% author:
+%{
+    Pengcheng Zhou
+    Columbia University, 2018
+    zhoupc1988@gmail.com
+%}
+
+%% code
+if ~exist('Y', 'var') || isempty(Y)
+    if isempty(obj.frame_range)
+        Y = evalin('base', 'Y_cnmf');
+    else
+        temp = obj.frame_range;
+        Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+    end
+end
 Y = double(obj.reshape(Y, 1));
 d1 = obj.options.d1;
 d2 = obj.options.d2;
@@ -8,40 +49,39 @@ nr = 6;
 if ~exist('ind_neuron', 'var') || isempty(ind_neuron)
     ind_neuron = 1:size(obj.A, 2);
 end
-if ~exist('rot_info', 'var') 
-    rot_angle = 6.5;
-    rot_xlim = [13, 125];
-    rot_ylim = [32, 51];
+if ~exist('rot_info', 'var')
+    [rot_angle, rot_xlim, rot_ylim] = find_rotation(obj.reshape(obj.spatial_range, 3));
 else
     rot_angle = rot_info.rot_angle;
     rot_xlim = rot_info.rot_xlim;
     rot_ylim = rot_info.rot_ylim;
 end
-rot_flag = true;
-if rot_flag
-    img_width = diff(rot_xlim);
-    img_height = diff(rot_ylim);
-else
-    img_width = d2;
-    img_height = d1;
+if ~exist('fig_visible', 'var')
+    fig_visible = 'on';
 end
+rot_flag = true;
+img_width = diff(rot_xlim);
+img_height = diff(rot_ylim);
+
 
 % play movies
 figure('papersize', [img_width*nc, img_height*nr*2]/...
-    max(img_height*nr,img_width*nc)*16);
-width = round(img_width*nc/max(img_height*nr,img_width*nc)*1500);
-height =round(img_height*nr*1.4/max(img_height*nr, img_width*nc)*1500);
-set(gcf, 'position', [100, 100, width, height]);
+    max(img_height*nr,img_width*nc)*10);
+width = round(img_width*nc/max(img_height*nr,img_width*nc)*1000);
+height =round(img_height*nr*1.4/max(img_height*nr, img_width*nc)*1000);
+set(gcf, 'position', [100, 100, width, height], 'visible', fig_visible);
 ha = tight_subplot(nr, nc);
 ha = reshape(ha, nc, nr);
 if ~exist('col_map', 'var') || isempty(col_map)
     col_map = jet;
 end
+set(gcf, 'colormap', col_map);
 if exist('avi_nm', 'var') && ischar(avi_nm)
     avi_file = VideoWriter(avi_nm);
     if ~isnan(obj.Fs)
         avi_file.FrameRate = obj.Fs;
     end
+    avi_file.Quality = 100; 
     avi_file.open();
     avi_flag = true;
 else
@@ -50,15 +90,12 @@ end
 if ismatrix(Y); Y=obj.reshape(Y, 2); end
 T = size(Y, ndims(Y));
 if (nargin<3) || (isempty(min_max))
-    temp = Y(:, :, randi(T, min(100, T), 1));
-    min_max = quantile(temp(:), [0.2, 0.9999]);
-    min_max(1) = max(min_max(1), 0);
-    min_max(2) = max(min_max(2), min_max(1)+0.1);
+    min_max = [1, 17];
 end
 if ~exist('t_pause', 'var'); t_pause=0.01; end
 
 sort_frames = false;
-noise_method = 'std_res'; 
+noise_method = 'std_res';
 if strcmpi(noise_method, 'std_res')
     Yres = obj.compute_residual(Y);
     sn = std(Yres, 0, 2);
@@ -93,109 +130,177 @@ end
 kt = 3;
 k_res = 2;
 min_max_y = min_max;
+fprintf('writing the demixing videos...\nProgress bar:\n');
+for mframe=1:100
+    fprintf('|'); 
+end
+fprintf('\n'); 
+k0 = 0;
 for mframe=1:kt:T
     t = tt(mframe);
     ybg = obj.reshape(b_ * obj.f(:, t)+b0_, 3);
     yac = obj.reshape(A_(:, ind_neuron) * obj.C(ind_neuron, t), 3);
     ymixed = obj.reshape(Y_mixed(:, t, :), 3);
     for z=d3:-1:1
-        axes(ha(z,1));
+        % show raw video data
         if rot_flag
-            imagesc(imrotate(Y(:, :, z, t), rot_angle), min_max_y); colormap(col_map);
-            xlim(rot_xlim);
-            ylim(rot_ylim);
+            imagesc(imrotate(Y(:, :, z, t), rot_angle), 'parent', ha(z,1), ...
+                min_max_y);
+            colormap(col_map);
         else
-            imagesc(Y(:, :, z, t), min_max_y); colormap(col_map);
-            axis tight;
+            imagesc(Y(:, :, z, t), 'parent', ha(z,1), min_max_y); colormap(col_map);
         end
-        axis off;
-        if z==ceil(d3/2)
-            title(sprintf('raw data (1x, [%d, %d])', min_max_y(1), min_max_y(2)), 'color', 'm');
-        end
-        axes(ha(z, 2));
-        if rot_flag
-            imagesc(imrotate(ybg(:, :, z), rot_angle), min_max_y); colormap(col_map);
-            xlim(rot_xlim);
-            ylim(rot_ylim);
-        else
-            imagesc(ybg(:, :, 3), min_max_y); colormap(col_map);
-            axis tight;
-        end
-        axis off;
-        if z==ceil(d3/2)
-            title(sprintf('background (1x, [%d, %d])', min_max_y(1), min_max_y(2)), 'color', 'm');
+        set(ha(z,1), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
+        if z==1
+            text(rot_xlim(1), rot_ylim(1)+3, sprintf('raw data (1x, [%d, %d])', min_max_y(1), ...
+                min_max_y(2)), 'fontsize', 12, 'fontweight', 'bold', 'color', 'm','parent', ha(z, 1))
         end
         
-        axes(ha(z,3));
+        % show background
         if rot_flag
-            imagesc(imrotate(Y(:, :, z, t)-ybg(:, :, z), rot_angle), min_max); colormap(col_map);
-            xlim(rot_xlim);
-            ylim(rot_ylim);
+            imagesc(imrotate(ybg(:, :, z), rot_angle), 'parent', ha(z,2), ...
+                min_max_y);
         else
-            imagesc(Y(:, :, z, t)-ybg(:, :, z), min_max); colormap(col_map);
-            axis tight;
+            imagesc(ybg(:, :, z), 'parent', ha(z,2), min_max_y); %#ok<*UNRCH>
         end
-        axis off;
-        if z==ceil(d3/2)
-            title(sprintf('background-subtracted (1x, [%d, %d])', min_max(1), min_max(2)), 'color', 'm');
+        set(ha(z,2), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
+        if z==1
+            text(rot_xlim(1), rot_ylim(1)+3, ...
+                sprintf('background (1x, [%d, %d])', min_max_y(1), ...
+                min_max_y(2)), 'fontsize', 12, 'fontweight', 'bold', ...
+                'color', 'm', 'parent', ha(z,2));
         end
         
-        axes(ha(z, 4));
+        % background subtracted video
         if rot_flag
-            imagesc(imrotate(yac(:, :, z), rot_angle),min_max); colormap(col_map);
-            xlim(rot_xlim);
-            ylim(rot_ylim);
+            imagesc(imrotate(Y(:, :, z, t)-ybg(:, :, z), rot_angle),...
+                'parent', ha(z, 3), min_max);
         else
-            imagesc(yac(:, :, z), min_max); colormap(col_map);
-            axis tight;
+            imagesc(Y(:, :, z, t)-ybg(:, :, z), 'parent', ha(z,3), ...
+                min_max);
         end
-        axis off;
-        if z==ceil(d3/2)
-            title(sprintf('denoised data (1x, [%d, %d])', min_max(1), min_max(2)), 'color', 'm');
+        set(ha(z,3), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
+        
+        if z==1
+               text(rot_xlim(1), rot_ylim(1)+3, ...
+                   sprintf('BG-subtracted (1x, [%d, %d])',...
+                   min_max(1), min_max(2)), 'fontsize', 12, 'fontweight', ...
+                   'bold', 'color', 'm','parent', ha(z, 3))
         end
-        axes(ha(z, 5));
+        
+        % denoised video
         if rot_flag
-            imagesc(imrotate(Y(:, :, z, t)-ybg(:, :, z)-yac(:, :, z), rot_angle), (min_max-mean(min_max))/k_res); colormap(col_map);
-            xlim(rot_xlim);
-            ylim(rot_ylim);
+            imagesc(imrotate(yac(:, :, z), rot_angle),...
+                'parent', ha(z, 4), min_max);
         else
-            imagesc(Y(:, :, z, t)-ybg(:, :, z)-yac(:, :, z), (min_max-mean(min_max))/k_res); colormap(col_map);
-            axis tight;
+            imagesc(yac(:, :, z), 'parent', ha(z,4), min_max);
         end
-        axis off;
-        if z==ceil(d3/2)
+        set(ha(z,4), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
+        if z==1
+            text(rot_xlim(1), rot_ylim(1)+3, sprintf('denoised (1x, [%d, %d])', min_max(1), ...
+                min_max(2)), 'fontsize', 12, 'fontweight', 'bold',...
+                'color', 'm','parent', ha(z, 4));
+        end
+        
+        % residual
+        if rot_flag
+            imagesc(imrotate(Y(:, :, z, t)-ybg(:, :, z)-yac(:, :, z), rot_angle),...
+                'parent', ha(z, 5), (min_max-mean(min_max))/k_res);
+        else
+            imagesc(Y(:, :, z, t)-ybg(:, :, z)-yac(:, :, z), ...
+                'parent', ha(z, 5), (min_max-mean(min_max))/k_res);
+        end
+        set(ha(z,5), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
+        if z==1
             temp = (min_max - mean(min_max))/k_res;
-            title(sprintf('residual (%dx, [%d, %d])', k_res, temp(1), temp(2)), 'color', 'm');
+            text(rot_xlim(1), rot_ylim(1)+3, ...
+                sprintf('residual (%dx, [%d, %d])', k_res, temp(1), temp(2)),...
+                'color', 'm', 'fontsize', 12, ...
+                'fontweight', 'bold','parent', ha(z, 5));
         end
         
-        axes(ha(z, 6));
+        % demixed video
         if rot_flag
-            imagesc(imrotate(squeeze(ymixed(:, :, z, :)), rot_angle));
-            xlim(rot_xlim);
-            ylim(rot_ylim);
+            imagesc(imrotate(squeeze(ymixed(:, :, z, :)), rot_angle), ...
+                'parent', ha(z, 6));
         else
-            imagesc(squeeze(ymixed(:, :, z, :)));
-            axis tight;
+            imagesc(squeeze(ymixed(:, :, z, :)), 'parent', ha(z, 6));
         end
-        axis off;
-        if z==ceil(d3/2)
-            title(sprintf('demixed video (1x, [%d, %d])', min_max(1), min_max(2)), 'color', 'm');
+        set(ha(z,6), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
+        
+        if z==1
+            text(rot_xlim(1), rot_ylim(1)+3, ...
+                sprintf('demixed (1x, [%d, %d])',...
+                min_max(1), min_max(2)), 'color', 'm', 'parent', ha(z, 6),...
+                'fontsize', 12, 'fontweight', 'bold');
+        end
+        if z==3
             if isnan(obj.Fs)
-                text(rot_xlim(1)+1, rot_ylim(1)+1, sprintf('Frame %d', t), 'fontsize', 15, 'color', 'w');
+                text(rot_xlim(2)/2+1, rot_ylim(2)-3, sprintf('Frame %d', t),...
+                    'fontsize', 12, 'color', 'w','parent', ha(z, 6));
             else
-                text(rot_xlim(1)+1, rot_ylim(1)+3, sprintf('Time = %.2f', t/obj.Fs), 'fontsize', 15, 'color', 'w');
+                text(rot_xlim(2)/2+1, rot_ylim(2)-3, sprintf('Time = %.2f sec', t/obj.Fs),...
+                    'fontsize', 12, 'color', 'w', 'parent', ha(z, 6));
             end
         end
     end
     
-    pause(t_pause);
+    if ~strcmpi(fig_visible, 'off')
+        pause(t_pause);
+    end
     if avi_flag
         temp = getframe(gcf);
         temp.cdata = imresize(temp.cdata, [height, width]);
         avi_file.writeVideo(temp);
     end
+    k1 = round(100*mframe/T); 
+    if k1>k0
+        for k=(k0+1):k1
+            fprintf('.');
+        end
+        k0 = k1; 
+    end
     
 end
 if avi_flag
     avi_file.close();
+end
+
+end
+
+
+function [rot_angle, rot_xlim, rot_ylim] = find_rotation(spatial_range)
+%% find an optimal rotation to show EM volume
+img = double(sum(spatial_range, 3)>0);
+[d1, d2] = size(img);
+nnz_row = sum(sum(img,2)>0);
+nnz_column = sum(sum(img,1)>0);
+
+if nnz_row>nnz_column
+    y = (1:d1);
+    temp = bsxfun(@times, img, (1:d2));
+    temp(temp==0) = nan;
+    [v, x] = max(temp, [], 2);
+    x(isnan(v)) = [];
+    y(isnan(v)) = [];
+else
+    x = (1:d2);
+    temp = bsxfun(@times, img, (1:d1)');
+    temp(temp==0) = nan;
+    [v, y] = max(temp, [], 1);
+    x(isnan(v)) = [];
+    y(isnan(v)) = [];
+end
+
+% remove the first and the last two pixels for removing outliers
+x = x(3:(end-2));
+y = y(3:(end-2));
+k = polyfit(x, y, 1);
+rot_angle = atan(k(1)) /pi *180;
+
+img_new = imrotate(img, rot_angle);
+img_new = imerode(img_new, strel('square', 3));
+[a, b] = find(img_new);
+rot_xlim = [min(b), max(b)];
+rot_ylim = [min(a), max(a)];
 end

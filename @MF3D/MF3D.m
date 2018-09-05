@@ -25,7 +25,7 @@ classdef MF3D < handle
         Fs = nan;    % frame rate
         file = '';
         frame_range;  % frame range of the data
-        spatial_range; % spatial area to be processed 
+        spatial_range; % spatial area to be processed
         %quality control
         ids;        % unique identifier for each neuron
         match_status = struct('status', [], 'em_ids', [], 'confidence', ...
@@ -110,16 +110,21 @@ classdef MF3D < handle
             if ~exist('ind', 'var') || isempty(ind)
                 return;
             end
-            
+            if islogical(ind)
+                n_del = sum(ind(:));
+            else
+                n_del = length(ind);
+            end
             if size(obj.scores,1) == size(obj.A, 2)
                 obj.scores(ind, :) = [];
             end
             obj.A(:, ind) = [];
             obj.A_mask(:, ind) = [];
             if ~isempty(obj.A_corr)
-                obj.A_corr(:, ind) = [];
+                try  obj.A_corr(:, ind) = []; catch;  end
             end
             obj.C(ind, :) = [];
+            obj.labels(ind) = [];
             if ~isempty(obj.S)
                 try obj.S(ind, :) = []; catch; end
             end
@@ -138,6 +143,7 @@ classdef MF3D < handle
             end
             
             % save the log
+            fprintf('%d neurons were deleted. \n', n_del);
         end
         
         
@@ -309,7 +315,7 @@ classdef MF3D < handle
                 Y(~ind, :) = 0; % remove pixels outside of the EM volume
             end
             
-            %% run HALS 
+            %% run HALS
             obj.update_temporal(Y, false, true);
             obj.update_spatial(Y);
             obj.update_background(Y);
@@ -402,10 +408,27 @@ classdef MF3D < handle
         
         %% compute the residual
         function Yres = compute_residual(obj, Y)
+            if ~exist('Y', 'var') || isempty(Y)
+                if isempty(obj.frame_range)
+                    Y = evalin('base', 'Y_cnmf');
+                else
+                    temp = obj.frame_range;
+                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+                end
+            end
+            Y = obj.reshape(Y, 1);
             Yres = bsxfun(@minus, obj.reshape(Y,1) - obj.b*obj.f-obj.A*obj.C, obj.b0);
         end
         
         function rss = compute_rss(obj, Y)
+            if ~exist('Y', 'var') || isempty(Y)
+                if isempty(obj.frame_range)
+                    Y = evalin('base', 'Y_cnmf');
+                else
+                    temp = obj.frame_range;
+                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+                end
+            end
             temp = bsxfun(@minus, obj.reshape(Y,1) - obj.b*obj.f-obj.A*obj.C, obj.b0);
             rss = sum(temp(:).^2);
         end
@@ -533,39 +556,87 @@ classdef MF3D < handle
                 % plane by plane
                 img1 = a1(:, :, m);
                 img2 = a2(:, :, m);
-                img{m} = imfuse(img1, img2);
+                img{m} = imfuse(img1, img2); 
             end
         end
         
-        %% compress results 
+        %% compress results
         function compress(obj, k_score)
-           obj.A = sparse(obj.A); 
-           obj.A_mask = sparse(obj.A_mask); 
-           obj.S = sparse(obj.S); 
-           [K_2p, K_em] = size(obj.scores); 
-           if ~exist('k_score', 'var') || isempty(k_score)
-               % keep the top 100 matches 
-               k_score = min(100, K_em); 
-           end 
-           if size(obj.A, 2) == K_2p
-               x = obj.scores; 
-               z = quantile(x, 1-k_score/K_em, 2);
-               x(bsxfun(@lt, x, z)) = 0; 
-               obj.scores = sparse(full(x)); 
-           end
+            obj.A = sparse(obj.A);
+            obj.A_mask = sparse(obj.A_mask);
+            obj.S = sparse(obj.S);
+            [K_2p, K_em] = size(obj.scores);
+            if ~exist('k_score', 'var') || isempty(k_score)
+                % keep the top 100 matches
+                k_score = min(100, K_em);
+            end
+            if size(obj.A, 2) == K_2p
+                x = obj.scores;
+                z = quantile(x, 1-k_score/K_em, 2);
+                x(bsxfun(@lt, x, z)) = 0;
+                obj.scores = sparse(full(x));
+            end
         end
         
-        %% reset the class object and clear results 
+        %% reset the class object and clear results
         function obj = reset(obj)
-            neuron = MF3D(); 
-            neuron.options = obj.options; 
-            neuron.dataloader = obj.dataloader; 
-            neuron.dataloader_denoised = obj.dataloader_denoised; 
-            neuron.dataloader_raw = obj.dataloader_raw; 
-            neuron.Fs = obj.Fs; 
-            neuron.frame_range = obj.frame_range; 
-            neuron.spatial_range = obj.spatial_range; 
-            obj = neuron.copy(); 
+            neuron = MF3D();
+            neuron.options = obj.options;
+            neuron.dataloader = obj.dataloader;
+            neuron.dataloader_denoised = obj.dataloader_denoised;
+            neuron.dataloader_raw = obj.dataloader_raw;
+            neuron.Fs = obj.Fs;
+            neuron.frame_range = obj.frame_range;
+            neuron.spatial_range = obj.spatial_range;
+            obj = neuron.copy();
+        end
+        
+        %% compare two neurons
+        function compare_pairs(obj, ind_pair, save_figs)
+            if ~exist('save_figs', 'var') || isempty(save_figs)
+                save_figs = false; 
+            end
+            img_A = obj.overlap_neurons(ind_pair, 'A');
+            obj.showImage(img_A);
+            set(gcf, 'name', '2p footprints'); 
+            if save_figs
+                saveas(gcf, sprintf('pair_%d_%d_A.pdf', ind_pair(1), ind_pair(2)));
+            end
+            
+            img_A_corr = obj.overlap_neurons(ind_pair, 'A_corr');
+            obj.showImage(img_A_corr);
+            set(gcf, 'name', 'correlation images'); 
+            if save_figs
+                saveas(gcf, sprintf('pair_%d_%d_A_corr.pdf', ind_pair(1), ind_pair(2)));
+            end
+            img_A_mask = obj.overlap_neurons(ind_pair, 'A_mask');
+            obj.showImage(img_A_mask);
+            set(gcf, 'name', 'EM footprints'); 
+            if save_figs
+                saveas(gcf, sprintf('pair_%d_%d_A_mask.pdf', ind_pair(1), ind_pair(2)));
+            end
+            
+            %% temporal
+            figure('papersize', [14, 4], 'name', 'temporal traces');
+            init_fig;
+            T = size(obj.C, 2);
+            pos = [0.07, 0.64, 0.85, 0.35];
+            for m=1:2
+                axes('position', pos);
+                plot((1:T)/15, obj.C_raw(ind_pair(m), :));
+                hold on;
+                plot((1:T)/15, obj.C(ind_pair(m), :));
+                axis  tight;
+                if m~=length(ind_pair)
+                    set(gca, 'xticklabel', []);
+                end
+                pos = pos + [0, -pos(4)-0.01, 0, 0];
+                ylabel(sprintf('cell %d', ind_pair(m)));
+            end
+            xlabel('Time (sec.)');
+            if save_figs
+                saveas(gcf, sprintf('pair_%d_%d_temporal.pdf', ind_pair(1), ind_pair(2)));
+            end
         end
     end
 end

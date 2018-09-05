@@ -10,4 +10,6 @@ end
 
 %% project all EM segments to the scanning planes
 ease.get_Aem_scan();
-pixels_em = (sum(Aem, 2)>0);
+pixels_em = neuron.reshape(sum(Aem, 2)>0, 3);
+pixels_em = imerode(pixels_em, strel('disk', 2)); 
+pixels_em = neuron.reshape(pixels_em>0, 1); 

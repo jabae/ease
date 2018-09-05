@@ -88,6 +88,9 @@ classdef EM2P < handle
         % method for computing the matching scores
         score_method = 'corr' ;
         
+        % create new MF3D class object for each scan 
+        create_new = false; 
+        
         % GUI
         gui = [];
         nam_show = 'cn';    % show correlation image

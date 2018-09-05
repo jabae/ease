@@ -20,7 +20,7 @@ if tmp_status.status(cell_id)==0
         end
     end
 elseif tmp_status.status(cell_id)==1
-    plot(em_sorted_scores, '-*', 'color', ease.gui.color_gray, 'parent', ease.gui.ax_score);
+    plot(em_sorted_scores, '-*', 'color', ease.gui.color_gray*0.8, 'parent', ease.gui.ax_score);
     tmp_rank = find(em_sort_id==tmp_ids);
     plot(tmp_rank, em_sorted_scores(tmp_rank), 'sm', 'parent', ease.gui.ax_score);
 end

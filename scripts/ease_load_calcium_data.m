@@ -29,7 +29,7 @@ if ease.block_id==0
     clear Y_all tmpY;
 else
     %% load video data into the memory
-    neuron = ease.load_video_mem();
+    neuron = ease.load_video_mem([],[], ease.create_new);
     
     %% calculate summary statistics for the selected data
     summary_images = ease.calculate_summary_images();

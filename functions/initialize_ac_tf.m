@@ -1,4 +1,4 @@
-function [ai, ci] = initialize_ac_tf(Yin, Yout, wi, ci, rank_out)
+function [ai, ci] = initialize_ac_tf(Yin, Yout, wi, ci, rank_out, maxIter)
 %% initialize a neuron's spatial & temporal component given its spatial support
 %{
     This initialization algorithm uses the spatial mask of the neuron and
@@ -12,6 +12,7 @@ function [ai, ci] = initialize_ac_tf(Yin, Yout, wi, ci, rank_out)
     wi:  d_in * 1 vector, weights on each pixels in the regression problem
     ci: 1*T vecotr, initialized temporal components
     rank_out: integer, the truncated rank of Yout
+    maxIter: integer, maximum number of iteration
 %}
 
 %% outputs:
@@ -38,6 +39,9 @@ end
 if ~exist('rank_out', 'var') || isempty(rank_out)
     rank_out = 20;
 end
+if ~exist('maxIter', 'var') || isempty(maxIter)
+    maxIter = 10;
+end
 [~, ~, V] = svdsecon(randn(rank_out*5, dout) * Yout, rank_out);
 % Vp = null(V');   % orthogonal basis for the null space of V
 
@@ -49,13 +53,12 @@ Y_p = Yin - (Yin*V) *V';
 
 %% iteratively update ai an dalpha
 ci_p = ci - (ci*V) * V';
-for miter=1:10
+for miter=1:maxIter
     % estimate ai
     ai = max(0, Y_p*ci_p' / (ci_p*ci_p'));  % ai >= 0
     
     %% estimate ci_p
     ci_p = ((wi.*ai)'*Y_p) / ((wi.*ai)'*ai);
-    
 end
 
 %% find ci by smoothing its trend
