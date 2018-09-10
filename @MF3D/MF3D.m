@@ -361,6 +361,19 @@ classdef MF3D < handle
                 elseif strcmpi(srt, 'l3l2')
                     l3l2 = sum(obj.C_raw.^3, 2) ./ (sum(obj.C_raw.^2,2).^(1.5));
                     [~, srt] = sort(l3l2, 'descend');
+                elseif strcmpi(srt, 'temporal_cluster')
+                    obj.orderROIs('pnr'); 
+                    dd = pdist(obj.C_raw, 'cosine');
+                    tree = linkage(dd, 'average');
+                    srt = optimalleaforder(tree, dd);
+                elseif strcmpi(srt, 'spatial_cluster')
+                    obj.orderROIs('pnr');
+                    A_ = bsxfun(@times, obj.A, 1./sqrt(sum(obj.A.^2, 1))); 
+                    temp = 1-A_' * A_; 
+                    dd = temp(tril(true(size(temp)), -1)); 
+                    dd = reshape(dd, 1, []); 
+                    tree = linkage(dd, 'average');
+                    srt = optimalleaforder(tree, dd);                
                 else %if strcmpi(srt, 'snr')
                     snrs = var(obj.C, 0, 2)./var(obj.C_raw-obj.C, 0, 2);
                     [~, srt] = sort(snrs, 'descend');
@@ -478,7 +491,9 @@ classdef MF3D < handle
                 else
                     imagesc(ai(:, :, d3-m+1), vlim);
                 end
-                axis off; %equal off tight;
+                axis equal tight; %equal off tight;
+                box on; 
+                set(gca, 'xtick', [], 'ytick', []); 
                 pos_ax = pos_ax + dpos;
             end
         end
@@ -591,6 +606,54 @@ classdef MF3D < handle
             obj = neuron.copy();
         end
         
+        %%        
+        function [img, col0, AA] = overlapA(obj, ind, ratio, bg_white)
+            %merge all neurons' spatial components into one singal image
+            if nargin<2 || isempty(ind)
+                AA = obj.A;
+            else
+                AA = obj.A(:, ind);
+            end
+            if nargin<3
+                ratio = 0.3;
+            end
+            if ~exist('bg_white', 'var') || isempty(bg_white)
+                bg_white = false; 
+            end
+            d3 = obj.options.d3; 
+            v_max = 1;
+            AA = bsxfun(@times, AA, v_max./max(AA,[],1));
+            AA(bsxfun(@lt, AA, max(AA, [], 1)*ratio)) = 0;
+            [d, K] = size(AA);
+            
+            if K==2
+                col = [4, 2];
+            elseif K==3
+                col = [4, 2, 1];
+            else
+                col = randi(6, 1, K);
+            end
+            if bg_white
+                col = 7-col; 
+            end
+            col0 = col;
+            img = zeros(d, 3);
+            for m=3:-1:1
+                img(:, m) = sum(bsxfun(@times, AA, mod(col, 2)), 2);
+                col = floor(col/2);
+            end
+            temp = img/max(img(:))*(2^16);
+            temp = uint16(temp);
+            if bg_white 
+                temp = 2^16-temp; 
+            end
+            temp = obj.reshape(temp, 3); 
+            img = cell(1, d3); 
+            for m=1:d3
+               img{m} = squeeze(temp(:, :, m, :));  
+            end
+        end
+        
         %% compare two neurons
         function compare_pairs(obj, ind_pair, save_figs)
             if ~exist('save_figs', 'var') || isempty(save_figs)
@@ -598,20 +661,22 @@ classdef MF3D < handle
             end
             img_A = obj.overlap_neurons(ind_pair, 'A');
             obj.showImage(img_A);
-            set(gcf, 'name', '2p footprints'); 
+            tmp_pos0 = get(gcf, 'position'); 
+            tmp_pos0(1:2) = [0, 0]; 
+            set(gcf, 'name', '2p footprints', 'position', tmp_pos0); 
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_A.pdf', ind_pair(1), ind_pair(2)));
             end
             
             img_A_corr = obj.overlap_neurons(ind_pair, 'A_corr');
             obj.showImage(img_A_corr);
-            set(gcf, 'name', 'correlation images'); 
+            set(gcf, 'name', 'correlation images', 'position', tmp_pos0+[tmp_pos0(3), 0, 0, 0]); 
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_A_corr.pdf', ind_pair(1), ind_pair(2)));
             end
             img_A_mask = obj.overlap_neurons(ind_pair, 'A_mask');
             obj.showImage(img_A_mask);
-            set(gcf, 'name', 'EM footprints'); 
+            set(gcf, 'name', 'EM footprints', 'position', tmp_pos0+[2*tmp_pos0(3),0, 0 0]); 
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_A_mask.pdf', ind_pair(1), ind_pair(2)));
             end
@@ -634,9 +699,40 @@ classdef MF3D < handle
                 ylabel(sprintf('cell %d', ind_pair(m)));
             end
             xlabel('Time (sec.)');
+            tmp_pos = get(gcf, 'position'); 
+            tmp_pos(1:2) =[0, 0]; 
+            set(gcf, 'position', tmp_pos); 
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_temporal.pdf', ind_pair(1), ind_pair(2)));
             end
+        end
+        
+        %% normalize data 
+        function normalize(obj, method)
+            if ~exist('method', 'var') || isempty(method)
+                method = 'c_noise'; 
+            end
+                
+            if strcmpi(method, 'a_max')
+                norm_A = max(obj.A, [], 1);
+            elseif strcmpi(method, 'c_noise')
+                norm_A = 1./GetSn(obj.C_raw)'; 
+            elseif strcmpi(method, 'c_max')
+                norm_A = 1./max(obj.C,[], 2)'; 
+            else
+                norm_A = 1./max(obj.C,[], 2)';
+            end
+            obj.A = bsxfun(@times, obj.A, 1./norm_A);
+            obj.C = bsxfun(@times, obj.C, norm_A');
+            obj.C_raw = bsxfun(@times, obj.C_raw, norm_A'); 
+            obj.S = bsxfun(@times, obj.S, norm_A'); 
+            
+        end
+        
+        %% get EM ids 
+        function em_ids = get_em_ids(obj, ind, em_info)
+            ind = cell2mat(obj.match_status.em_ids(ind)); 
+            em_ids = em_info(ind, 1); 
         end
     end
 end

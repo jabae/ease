@@ -1,29 +1,29 @@
 function summary_images = calculate_summary_images(obj, mscan, mblock)
-%% what does this function do 
+%% what does this function do
 %{
-    create a class object for storing the precessing results of the selected scan and block  
+    create a class object for storing the precessing results of the selected scan and block
 %}
 
-%% inputs: 
+%% inputs:
 %{
-    mscan: scan ID  
-    mblock: block ID 
+    mscan: scan ID
+    mblock: block ID
 %}
 
-%% outputs: 
+%% outputs:
 %{
     summary_images: struct variable with all summary images for the
-    corresponding data. 
+    corresponding data.
 %}
 
-%% author: 
+%% author:
 %{
-    Pengcheng Zhou 
-    Columbia University, 2018 
+    Pengcheng Zhou
+    Columbia University, 2018
     zhoupc1988@gmail.com
 %}
 
-%% code 
+%% code
 % check the inputs
 if ~exist('mscan', 'var')
     mscan = obj.scan_id;
@@ -39,7 +39,7 @@ matfile_summary = fullfile(obj.output_folder, ...
 if ~exist(matfile_summary, 'file')
     flag_processed_raw = false(obj.num_scans, obj.num_blocks);
     flag_processed_denoised = flag_processed_raw; %#ok<NASGU>
-    flag_processed = false(obj.num_scans, obj.num_blocks); 
+    flag_processed = false(obj.num_scans, obj.num_blocks);
     save(matfile_summary, 'FOV_', 'flag_processed_raw',...
         'flag_processed_denoised', '-v7.3');
 else
@@ -52,13 +52,21 @@ else
     end
 end
 
+%% when we process all blocks, just randomly select one block to get its results
+if mblock==0
+    mblock = find(flag_processed(mscan, :), 1, 'first');
+    if isempty(mblock)
+        mblock = 1;
+    end
+end
+
 % check whether the dada has been processed or not
 if obj.use_denoise
     var_name = sprintf('scan%d_block%d_denoised', mscan, mblock);
-    data_name = 'Y_denoised'; 
+    data_name = 'Y_denoised';
 else
     var_name = sprintf('scan%d_block%d_raw', mscan, mblock);
-    data_name = 'Y_raw'; 
+    data_name = 'Y_raw';
 end
 fprintf('video data: scan=%d, block=%d\n', mscan, mblock);
 
@@ -86,14 +94,14 @@ if isempty(Y)
     end
     Y = dl.load_tzrc();
 end
-fprintf('    Done\n'); 
-%% computing summary statistics 
+fprintf('    Done\n');
+%% computing summary statistics
 summary_images = struct('std', zeros(obj.d1, obj.d2, obj.num_slices), ...
-                        'cn', zeros(obj.d1, obj.d2, obj.num_slices), ...
-                        'max', zeros(obj.d1, obj.d2, obj.num_slices), ...
-                        'mean', zeros(obj.d1, obj.d2, obj.num_slices), ...
-                        'sn', zeros(obj.d1, obj.d2, obj.num_slices), ...
-                        'pnr', zeros(obj.d1, obj.d2, obj.num_slices)); 
+    'cn', zeros(obj.d1, obj.d2, obj.num_slices), ...
+    'max', zeros(obj.d1, obj.d2, obj.num_slices), ...
+    'mean', zeros(obj.d1, obj.d2, obj.num_slices), ...
+    'sn', zeros(obj.d1, obj.d2, obj.num_slices), ...
+    'pnr', zeros(obj.d1, obj.d2, obj.num_slices));
 for mslice=1:obj.num_slices
     fprintf('\nSlice %d\n', mslice);
     tmpY = squeeze(Y(:, :, mslice,:));
