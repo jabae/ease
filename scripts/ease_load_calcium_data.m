@@ -2,7 +2,7 @@ if ease.block_id==0
     % load all blocks if block_id = 0;
     fprintf('You are going to load all %d blocks of scan %d\n', ...
         ease.num_blocks, ease.scan_id);
-    neuron = ease.get_MF3D();
+    neuron = ease.get_MF3D([], ease.create_new);
 
     T_all = 0; % total number of frames
     Y_all = cell(1, ease.num_slices);

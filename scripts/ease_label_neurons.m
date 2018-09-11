@@ -22,6 +22,7 @@ while true
     % show neuron
     cell_id = min(K, cell_id+1);
     ease_show_2p_neuron;
+    drawnow; 
     
     % choose cell id
     commandwindow;
@@ -31,6 +32,7 @@ while true
     elseif temp<0
         cell_id = max(1, cell_id+temp);
         ease_show_2p_neuron;
+        drawnow; 
     end
     
     

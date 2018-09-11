@@ -734,6 +734,34 @@ classdef MF3D < handle
             ind = cell2mat(obj.match_status.em_ids(ind)); 
             em_ids = em_info(ind, 1); 
         end
+        
+        %% find EM boundary 
+        function em_ranges = get_em_boundary(obj)
+            if isempty(neuron.spatial_range)
+                return; 
+            end
+            %% compute boundary
+            ind = obj.reshape(obj.spatial_range, 3);
+            em_ranges = cell(1, obj.options.d3);
+            for m=1:3
+                [y, x] = find(ind(:, :, m));
+                k = convhull(x, y);
+                em_ranges{m} = [x(k), y(k)];
+            end
+        end
+        
+        %% remove neurons in the blacklist 
+        function remove_black_list(obj, black_list)
+            K = size(obj.A, 2); 
+            ind = false(K, 1); 
+            for m=1:K
+                if obj.match_status.status(m)==1 && ...
+                        any(black_list ==obj.match_status.em_ids{m})
+                    ind(m) = true; 
+                end
+            end
+            obj.delete(find(ind)); 
+        end 
     end
 end
 
