@@ -1,4 +1,4 @@
-function ind_voxels_em = initialize_em(obj, Aem, Y, options)
+function ind_voxels_em = initialize_em(obj, Aem, Y, options, black_list, white_list)
 %% initialize A & C in the CNMF model using spatial masks given by EM segments.
 %{
     This function is used for initializing neurons given a pool of spatial
@@ -10,6 +10,9 @@ function ind_voxels_em = initialize_em(obj, Aem, Y, options)
     Aem: d_em * K_em matrix, spatial footprints given by EM segments
     Y: d * T, data
     options: struct variable for containing all options 
+    black_list: a list of EM indices that should be ignored during the
+    initialization step 
+    white_list: a list of candidate EM components
 %}
 
 %% outputs: 
@@ -27,6 +30,12 @@ function ind_voxels_em = initialize_em(obj, Aem, Y, options)
 if iscell(Aem)
     % convert cell array to a matrix
     Aem =  obj.convert_matrix(Aem);
+end
+if exist('white_list', 'var') && ~isempty(white_list)
+    ind = true(1, size(Aem, 2)); 
+    ind(white_list) = false; 
+    Aem(:, ind) = 0; 
+    Aem = sparse(Aem); 
 end
 
 if ~exist('options', 'var') || isempty(options)
@@ -60,6 +69,10 @@ if ~clear_results
     ids_matched = cell2mat(obj.match_status.em_ids(obj.match_status.status==1));
     Aem_sum(ids_matched) = 0;
 end
+if exist('black_list', 'var') && ~isempty(black_list)
+    Aem_sum(black_list) = 0;
+end
+
 K_em = length(Aem_sum>0);    % number of EM components.
 
 [~, temp] = sort(Aem_sum, 'descend');    % find components within the scanning planes

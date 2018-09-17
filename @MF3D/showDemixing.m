@@ -115,6 +115,7 @@ Y_mixed = zeros(obj.options.d1*obj.options.d2*obj.options.d3, ...
 temp = prism;
 K = size(obj.A(:, ind_neuron), 2);
 col = temp(randi(64, K,1), :);
+
 for m=1:3
     Y_mixed(:, :, m) = A_(:, ind_neuron)* (diag(col(:,m))*obj.C(ind_neuron, :));
 end
@@ -127,7 +128,7 @@ if sort_frames
 else
     tt = 1:T;
 end
-kt = 3;
+kt = 2;
 k_res = 2;
 min_max_y = min_max;
 fprintf('writing the demixing videos...\nProgress bar:\n');
@@ -266,41 +267,4 @@ if avi_flag
     avi_file.close();
 end
 
-end
-
-
-function [rot_angle, rot_xlim, rot_ylim] = find_rotation(spatial_range)
-%% find an optimal rotation to show EM volume
-img = double(sum(spatial_range, 3)>0);
-[d1, d2] = size(img);
-nnz_row = sum(sum(img,2)>0);
-nnz_column = sum(sum(img,1)>0);
-
-if nnz_row>nnz_column
-    y = (1:d1);
-    temp = bsxfun(@times, img, (1:d2));
-    temp(temp==0) = nan;
-    [v, x] = max(temp, [], 2);
-    x(isnan(v)) = [];
-    y(isnan(v)) = [];
-else
-    x = (1:d2);
-    temp = bsxfun(@times, img, (1:d1)');
-    temp(temp==0) = nan;
-    [v, y] = max(temp, [], 1);
-    x(isnan(v)) = [];
-    y(isnan(v)) = [];
-end
-
-% remove the first and the last two pixels for removing outliers
-x = x(3:(end-2));
-y = y(3:(end-2));
-k = polyfit(x, y, 1);
-rot_angle = atan(k(1)) /pi *180;
-
-img_new = imrotate(img, rot_angle);
-img_new = imerode(img_new, strel('square', 3));
-[a, b] = find(img_new);
-rot_xlim = [min(b), max(b)];
-rot_ylim = [min(a), max(a)];
 end

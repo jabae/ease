@@ -1,6 +1,6 @@
 function C_ = decorrTemporal(obj, wd)
 if ~exist('wd', 'var') || isempty(wd)
-    wd = 1; 
+    wd = 3; 
 end
 %% find neighbors of each neurons
 A_ = obj.A;

@@ -26,6 +26,8 @@ classdef MF3D < handle
         file = '';
         frame_range;  % frame range of the data
         spatial_range; % spatial area to be processed
+        white_list = []; % EM components that should be considered.
+        black_list = []; % EM components that should be ignored
         %quality control
         ids;        % unique identifier for each neuron
         match_status = struct('status', [], 'em_ids', [], 'confidence', ...
@@ -137,6 +139,10 @@ classdef MF3D < handle
             try  obj.ids(ind) = [];   catch;   end
             try obj.tags(ind) =[]; catch; end
             if ~isempty(obj.match_status.status)
+                % add these deleted neurons to a blacklist
+                temp = cell2mat(obj.match_status.em_ids(ind));
+                obj.black_list = unique([obj.black_list; reshape(temp, [], 1)]);
+                % delete
                 obj.match_status.status(ind) = [];
                 obj.match_status.em_ids(ind) = [];
                 obj.match_status.confidence(ind) = [];
@@ -294,7 +300,7 @@ classdef MF3D < handle
         end
         
         %% initialization given EM masks
-        ind_voxels_em = initialize_em(obj, Aem, Y, options);
+        ind_voxels_em = initialize_em(obj, Aem, Y, options, black_list, white_list);
         
         %% deconvolve all temporal components
         C_ = deconvTemporal(obj, use_parallel, method_noise)
@@ -316,9 +322,9 @@ classdef MF3D < handle
             end
             
             %% run HALS
+            obj.update_background(Y);
             obj.update_temporal(Y, false, true);
             obj.update_spatial(Y);
-            obj.update_background(Y);
         end
         
         %% function remove false positives
@@ -362,18 +368,18 @@ classdef MF3D < handle
                     l3l2 = sum(obj.C_raw.^3, 2) ./ (sum(obj.C_raw.^2,2).^(1.5));
                     [~, srt] = sort(l3l2, 'descend');
                 elseif strcmpi(srt, 'temporal_cluster')
-                    obj.orderROIs('pnr'); 
+                    obj.orderROIs('pnr');
                     dd = pdist(obj.C_raw, 'cosine');
-                    tree = linkage(dd, 'average');
+                    tree = linkage(dd, 'complete');
                     srt = optimalleaforder(tree, dd);
                 elseif strcmpi(srt, 'spatial_cluster')
                     obj.orderROIs('pnr');
-                    A_ = bsxfun(@times, obj.A, 1./sqrt(sum(obj.A.^2, 1))); 
-                    temp = 1-A_' * A_; 
-                    dd = temp(tril(true(size(temp)), -1)); 
-                    dd = reshape(dd, 1, []); 
-                    tree = linkage(dd, 'average');
-                    srt = optimalleaforder(tree, dd);                
+                    A_ = bsxfun(@times, obj.A, 1./sqrt(sum(obj.A.^2, 1)));
+                    temp = 1-A_' * A_;
+                    dd = temp(tril(true(size(temp)), -1));
+                    dd = reshape(dd, 1, []);
+                    tree = linkage(dd, 'complete');
+                    srt = optimalleaforder(tree, dd);
                 else %if strcmpi(srt, 'snr')
                     snrs = var(obj.C, 0, 2)./var(obj.C_raw-obj.C, 0, 2);
                     [~, srt] = sort(snrs, 'descend');
@@ -387,6 +393,7 @@ classdef MF3D < handle
                 obj.C_raw = obj.C_raw(srt,:);
                 obj.S = obj.S(srt, :);
                 obj.ids = obj.ids(srt);
+                obj.labels = obj.labels(srt); 
                 obj.match_status.status = obj.match_status.status(srt);
                 obj.match_status.em_ids = obj.match_status.em_ids(srt);
                 if ~isempty(obj.scores)
@@ -424,15 +431,19 @@ classdef MF3D < handle
             if ~exist('Y', 'var') || isempty(Y)
                 if isempty(obj.frame_range)
                     Y = evalin('base', 'Y_cnmf');
+                    Y = obj.reshape(Y, 1);
                 else
-                    temp = obj.frame_range;
-                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+                    tmp_range = obj.frame_range;
+                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', tmp_range(1), tmp_range(2)));
                 end
             end
-            Y = obj.reshape(Y, 1);
-            Yres = bsxfun(@minus, obj.reshape(Y,1) - obj.b*obj.f-obj.A*obj.C, obj.b0);
+            
+            Y = obj.reshape(Y, 1);            
+            Yres = bsxfun(@minus, obj.reshape(Y,1) - ...
+                obj.b*obj.f - obj.A*obj.C, obj.b0);
         end
         
+        %% compute RSS 
         function rss = compute_rss(obj, Y)
             if ~exist('Y', 'var') || isempty(Y)
                 if isempty(obj.frame_range)
@@ -471,7 +482,7 @@ classdef MF3D < handle
             if strcmpi(orientation, 'horizental')
                 h = d1+2;
                 w = d3*(d2+2);
-                pos_ax = [1-(d2+1)/w, 1/h, d2/w, 1-2/h];
+                pos_ax = [1-(d2+2)/w, 1/h, d2/w, 1-2/h];
                 dpos = [-(d2+2)/w, 0, 0, 0];
             else
                 h = d3*(d1+2);
@@ -491,9 +502,9 @@ classdef MF3D < handle
                 else
                     imagesc(ai(:, :, d3-m+1), vlim);
                 end
-                axis equal tight; %equal off tight;
-                box on; 
-                set(gca, 'xtick', [], 'ytick', []); 
+                axis tight; %equal off tight;
+                box on;
+                set(gca, 'xtick', [], 'ytick', []);
                 pos_ax = pos_ax + dpos;
             end
         end
@@ -571,7 +582,7 @@ classdef MF3D < handle
                 % plane by plane
                 img1 = a1(:, :, m);
                 img2 = a2(:, :, m);
-                img{m} = imfuse(img1, img2); 
+                img{m} = imfuse(img1, img2);
             end
         end
         
@@ -606,22 +617,35 @@ classdef MF3D < handle
             obj = neuron.copy();
         end
         
-        %%        
-        function [img, col0, AA] = overlapA(obj, ind, ratio, bg_white)
+        %%
+        function [img, col0, AA] = overlapA(obj, ind, ratio, bg_white, use_em)
             %merge all neurons' spatial components into one singal image
-            if nargin<2 || isempty(ind)
-                AA = obj.A;
-            else
-                AA = obj.A(:, ind);
+            if ~exist('use_em', 'var') || isempty(use_em)
+                use_em = false;
             end
-            if nargin<3
+            if use_em
+                A_ = obj.A_mask;
+            else
+                A_ = obj.A;
+            end
+            if nargin<2 || isempty(ind)
+                AA = A_;
+            else
+                AA = A_(:, ind);
+            end
+            if ~exist('ratio', 'var')||isempty(ratio)
                 ratio = 0.3;
             end
             if ~exist('bg_white', 'var') || isempty(bg_white)
-                bg_white = false; 
+                bg_white = false;
             end
-            d3 = obj.options.d3; 
+            d3 = obj.options.d3;
             v_max = 1;
+            
+            %% normalize the amplitude of each neuron
+            %             for m=1:size(AA, 2)
+            %                 AA(:, m) = scale_image(AA(:, m));
+            %             end
             AA = bsxfun(@times, AA, v_max./max(AA,[],1));
             AA(bsxfun(@lt, AA, max(AA, [], 1)*ratio)) = 0;
             [d, K] = size(AA);
@@ -634,8 +658,9 @@ classdef MF3D < handle
                 col = randi(6, 1, K);
             end
             if bg_white
-                col = 7-col; 
+                col = 7-col;
             end
+            col = 1:4; 
             col0 = col;
             img = zeros(d, 3);
             for m=3:-1:1
@@ -644,39 +669,39 @@ classdef MF3D < handle
             end
             temp = img/max(img(:))*(2^16);
             temp = uint16(temp);
-            if bg_white 
-                temp = 2^16-temp; 
+            if bg_white
+                temp = 2^16-temp;
             end
-            temp = obj.reshape(temp, 3); 
-            img = cell(1, d3); 
+            temp = obj.reshape(temp, 3);
+            img = cell(1, d3);
             for m=1:d3
-               img{m} = squeeze(temp(:, :, m, :));  
+                img{m} = squeeze(temp(:, :, m, :));
             end
         end
         
         %% compare two neurons
         function compare_pairs(obj, ind_pair, save_figs)
             if ~exist('save_figs', 'var') || isempty(save_figs)
-                save_figs = false; 
+                save_figs = false;
             end
             img_A = obj.overlap_neurons(ind_pair, 'A');
             obj.showImage(img_A);
-            tmp_pos0 = get(gcf, 'position'); 
-            tmp_pos0(1:2) = [0, 0]; 
-            set(gcf, 'name', '2p footprints', 'position', tmp_pos0); 
+            tmp_pos0 = get(gcf, 'position');
+            tmp_pos0(1:2) = [0, 0];
+            set(gcf, 'name', '2p footprints', 'position', tmp_pos0);
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_A.pdf', ind_pair(1), ind_pair(2)));
             end
             
             img_A_corr = obj.overlap_neurons(ind_pair, 'A_corr');
             obj.showImage(img_A_corr);
-            set(gcf, 'name', 'correlation images', 'position', tmp_pos0+[tmp_pos0(3), 0, 0, 0]); 
+            set(gcf, 'name', 'correlation images', 'position', tmp_pos0+[tmp_pos0(3), 0, 0, 0]);
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_A_corr.pdf', ind_pair(1), ind_pair(2)));
             end
             img_A_mask = obj.overlap_neurons(ind_pair, 'A_mask');
             obj.showImage(img_A_mask);
-            set(gcf, 'name', 'EM footprints', 'position', tmp_pos0+[2*tmp_pos0(3),0, 0 0]); 
+            set(gcf, 'name', 'EM footprints', 'position', tmp_pos0+[2*tmp_pos0(3),0, 0 0]);
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_A_mask.pdf', ind_pair(1), ind_pair(2)));
             end
@@ -699,46 +724,46 @@ classdef MF3D < handle
                 ylabel(sprintf('cell %d', ind_pair(m)));
             end
             xlabel('Time (sec.)');
-            tmp_pos = get(gcf, 'position'); 
-            tmp_pos(1:2) =[0, 0]; 
-            set(gcf, 'position', tmp_pos); 
+            tmp_pos = get(gcf, 'position');
+            tmp_pos(1:2) =[0, 0];
+            set(gcf, 'position', tmp_pos);
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_temporal.pdf', ind_pair(1), ind_pair(2)));
             end
         end
         
-        %% normalize data 
+        %% normalize data
         function normalize(obj, method)
             if ~exist('method', 'var') || isempty(method)
-                method = 'c_noise'; 
+                method = 'c_noise';
             end
-                
+            
             if strcmpi(method, 'a_max')
                 norm_A = max(obj.A, [], 1);
             elseif strcmpi(method, 'c_noise')
-                norm_A = 1./GetSn(obj.C_raw)'; 
+                norm_A = 1./GetSn(obj.C_raw)';
             elseif strcmpi(method, 'c_max')
-                norm_A = 1./max(obj.C,[], 2)'; 
+                norm_A = 1./max(obj.C,[], 2)';
             else
                 norm_A = 1./max(obj.C,[], 2)';
             end
             obj.A = bsxfun(@times, obj.A, 1./norm_A);
             obj.C = bsxfun(@times, obj.C, norm_A');
-            obj.C_raw = bsxfun(@times, obj.C_raw, norm_A'); 
-            obj.S = bsxfun(@times, obj.S, norm_A'); 
+            obj.C_raw = bsxfun(@times, obj.C_raw, norm_A');
+            obj.S = bsxfun(@times, obj.S, norm_A');
             
         end
         
-        %% get EM ids 
+        %% get EM ids
         function em_ids = get_em_ids(obj, ind, em_info)
-            ind = cell2mat(obj.match_status.em_ids(ind)); 
-            em_ids = em_info(ind, 1); 
+            ind = cell2mat(obj.match_status.em_ids(ind));
+            em_ids = em_info(ind, 1);
         end
         
-        %% find EM boundary 
+        %% find EM boundary
         function em_ranges = get_em_boundary(obj)
             if isempty(neuron.spatial_range)
-                return; 
+                return;
             end
             %% compute boundary
             ind = obj.reshape(obj.spatial_range, 3);
@@ -750,18 +775,77 @@ classdef MF3D < handle
             end
         end
         
-        %% remove neurons in the blacklist 
+        %% remove neurons in the blacklist
         function remove_black_list(obj, black_list)
-            K = size(obj.A, 2); 
-            ind = false(K, 1); 
+            K = size(obj.A, 2);
+            ind = false(K, 1);
             for m=1:K
                 if obj.match_status.status(m)==1 && ...
                         any(black_list ==obj.match_status.em_ids{m})
-                    ind(m) = true; 
+                    ind(m) = true;
                 end
             end
-            obj.delete(find(ind)); 
-        end 
+            obj.delete(ind);
+        end
+        
+        %% select pairs to merge
+        function correlated_pairs = find_correlated_pairs(obj, corr_thr)
+            if ~exist('corr_thr', 'var') || isempty(corr_thr)
+                corr_thr = [0.1, 0.3];
+            elseif length(corr_thr)==1
+                corr_thr = [0.1, corr_thr];
+            end
+            % corr_thr: [min_spatial_similarit, min_temporal_similarity]
+            A_sim = cosine_similarity(obj.A);
+            C_sim = cosine_similarity(obj.C');
+            [ii, jj] = find((A_sim>=corr_thr(1)) .* (C_sim>=corr_thr(2)));
+            ind = (ii<jj);
+            correlated_pairs = [ii(ind), jj(ind)];
+        end
+        
+        %% extract neuron boundaries
+        function em_contours = find_em_contours(obj, ind)
+            if ~exist('ind', 'var') || isempty(ind)
+                A_ = obj.A_mask;
+            else
+                A_ = obj.A_mask(:, ind);
+            end
+            K = size(A_, 2);
+            
+            d3 = obj.options.d3;
+            em_contours = cell(K, d3);
+            for m=1:K
+                % for each neuron
+                ai_em = obj.reshape(A_(:, m), 3);
+                for n=1:d3
+                    % for each plane
+                    img = ai_em(:, :, n);
+                    B = bwboundaries(img);
+                    for k=1:length(B)
+                        if size(B{k},1)<6
+                            break; 
+                        end
+                        frame_length = 5; 
+                        
+                        % for each connected components
+                        smoothx = sgolayfilt(B{k}(:, 2), 2, frame_length);
+                        smoothy = sgolayfilt(B{k}(:, 1) , 2, frame_length);
+                        B{k} = [smoothy, smoothx];
+                    end
+                    em_contours{m, n} = B;
+                end
+            end
+        end
+        
+        %% rotate image and zoom in 
+        function img = rotate_zoomin(obj, img)
+            img = obj.reshape(img, 3); 
+            ind_nnz = obj.reshape(obj.spatial_range, 3);
+            [rot_angle, crange, rrange] = find_rotation(ind_nnz);
+            img = imrotate(img, rot_angle);
+            img = img(rrange(1):rrange(2), crange(1):crange(2), :, :);
+        end
+        
     end
 end
 
