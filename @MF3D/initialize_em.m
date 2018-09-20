@@ -106,9 +106,12 @@ if clear_results
     Y = obj.reshape(Y,1);
     obj.A = []; 
     obj.C = []; 
-    obj.labels = []; 
-    obj.update_background(Y);
-    Y = obj.reshape(Y,1) - obj.b*obj.f;
+    obj.labels = [];
+    
+    tmp_f = mean(Y, 1);
+    tmp_f = tmp_f - mean(tmp_f);
+    tmp_b = (Y*tmp_f')/(tmp_f*tmp_f');   
+    Y = obj.reshape(Y,1) - tmp_b*tmp_f;
 else
     Y = obj.reshape(Y, 1) - obj.A*obj.C - obj.b*obj.f;
 end
