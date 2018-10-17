@@ -27,26 +27,22 @@ function ind_voxels_em = initialize_em(obj, Aem, Y, options, black_list, white_l
 %}
 
 %% choose candidate EM segments
-if iscell(Aem)
-    % convert cell array to a matrix
+
+% make sure that Aem is a matrix 
+if iscell(Aem)   
     Aem =  obj.convert_matrix(Aem);
 end
-if exist('white_list', 'var') && ~isempty(white_list)
-    ind = true(1, size(Aem, 2)); 
-    ind(white_list) = false; 
-    Aem(:, ind) = 0; 
-    Aem = sparse(Aem); 
-end
 
+% options for the initialization 
 if ~exist('options', 'var') || isempty(options)
-    init_method = 'tf';
-    order_statistics = 'thresh';
-    min_similarity = 0.6;
-    clear_results = false;
-    save_fig = true;
-    show_fig = true; 
-    K_candidate = 3000;
-    K_new = 50; 
+    init_method = 'tf';     %method for initializing single neurons 
+    order_statistics = 'thresh'; % method for ordering neurons 
+    min_similarity = 0.6;   % threshold for rejecting bad initialization 
+    clear_results = false;  % remove previous result 
+    save_fig = true;        % save figures for visualizing the initialization step 
+    show_fig = true;        % show figures for visualizing the initializaito step 
+    K_candidate = 3000;     % number of neurons to be considered 
+    K_new = 50;             % number of neurons to be added
 else
     init_method = options.init_method;
     order_statistics = options.order_statistics;
@@ -58,11 +54,8 @@ else
     K_new = options.K_new; 
 end
 
-% if ~exist('K_new', 'var')    % number of neurons to be initialized 
-%     K_new = 50;
-% end
-
-ind_voxels_em = sparse(sum(Aem, 2)>0);     % find voxels within EM volumes
+% order neurons and determine the list of candidate neurons 
+ind_voxels_em = sparse(sum(Aem, 2)>0); % find voxels within EM volumes
 Aem_sum = sum(Aem, 1);          % l1 norm of each ai_em
 if ~clear_results
     %ignore existing matches
@@ -72,15 +65,22 @@ end
 if exist('black_list', 'var') && ~isempty(black_list)
     Aem_sum(black_list) = 0;
 end
-
-K_em = length(Aem_sum>0);    % number of EM components.
-
-[~, temp] = sort(Aem_sum, 'descend');    % find components within the scanning planes
-tmp_ind = temp(1:min(K_candidate, K_em));
-em_ids = tmp_ind;           % ids of the candidate neurons
+if exist('white_list', 'var') && ~isempty(white_list)    
+%     [v, idx] = sort(Aem_sum(white_list), 'descend'); 
+%     em_ids = white_list(idx);
+    em_ids = white_list(Aem_sum(white_list)>0); 
+    K_new = length(em_ids); 
+    with_quality_control = false; 
+else
+    K_em = length(Aem_sum>0);    % number of EM components.
+    [~, temp] = sort(Aem_sum, 'descend');
+    tmp_ind = temp(1:min(K_candidate, K_em));
+    em_ids = tmp_ind;           % ids of the candidate neurons
+    with_quality_control = true; 
+end
 
 % normalize the spatial masks of the selected neurons 
-A_selected = full(Aem(:, tmp_ind));       % spatial masks of these neurons
+A_selected = full(Aem(:, em_ids));       % spatial masks of these neurons
 A_norm = sqrt(sum(A_selected.^2,1));     % normalize spatial components
 A_ = bsxfun(@times, A_selected, 1./A_norm);
 
@@ -172,6 +172,7 @@ switch lower(order_statistics)
     otherwise
         cc = skewness(C_, 0, 2); 
 end
+
 %% canvas for ploting results
 if show_fig
     figure('papersize', [10.08, 6.83]);
@@ -278,7 +279,7 @@ while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
     end
     
     %% quality control
-    if sum(ai_new(:).*ai(:))/norm(ai_new(ai>0), 2) < min_similarity
+    if with_quality_control && sum(ai_new(:).*ai(:))/norm(ai_new(ai>0), 2) < min_similarity
         ind_ignore(ind_max) = true;
         cc(ind_max) = 0;
         fprintf('hmmm, try next');

@@ -1,104 +1,65 @@
-% add the packages used in this pipeline
+% setup path and connect to a database 
 addpath(fullfile(EASE_dir, 'packages'));
-addpath(genpath(fullfile(EASE_dir, 'packages', 'microns_phase1_nda')));
-addpath(genpath(fullfile(EASE_dir, 'packages', 'pipeline', 'matlab')));
-addpath(genpath(fullfile(EASE_dir, 'packages', 'ta3')));
 addpath(genpath(fullfile(EASE_dir, 'packages', 'polygon2voxel')));
 
-
-%% connect to the database
-setenv('DJ_HOST','ninai.cluster-chjk7zcxhsgn.us-east-1.rds.amazonaws.com:3306')
-setenv('DJ_USER','pczhou')
-setenv('DJ_PASS','lilliput')
-dj.conn()
-
-%% parameters
-voxel_em = [25, 25, 20]/1000;   % the desired voxel size for voxelizing
-% em meshes (not the actual voxel size)
-dims_2p = [512, 512, 310];      % dimension of the stack data
-dims_video = [256, 256];        % dimension of the functional imaging data
-range_2p = [400, 400, 310];     % spatial range of 2p stack
-voxels_2p = range_2p ./ dims_2p;  % voxel size of 2p stack data
-scale_factor = 3.58/4;          % the factor for scaling EM coordinates.
-% this is used because of some pre-processing
-% error
-% load the transformation
-if exist(matfile_transformation, 'file')
-    load(matfile_transformation);
+temp = dj.conn;
+if ~temp.isConnected
+    ease_connect_database;
+end
+%% get the transformation matrix between EM space and 2P space 
+if ~exist(fullfile(ease.data_folder, ease.matfile_transformation), 'file')
+    ease_get_transformation; 
 else
-    ease_get_transformation;
+    load(fullfile(ease.data_folder, ease.matfile_transformation)); 
 end
 
 % create a struct variable storing parameters
-options.voxel_em = voxel_em;
-options.dims_2p = dims_2p;
-options.range_2p = range_2p;
+options.voxel_em = [256, 256, 240]/1000; % voxelize EM data with this resolution 
+options.dims_2p = ease.dims_stack;
+options.range_2p = ease.range_2p;
 options.A = A_convert;
 options.offset = offset;
-options.scale_factor = scale_factor;
-MAX_LENGTH = 64;
-
-%% fetch all em segments and save them into a matfile
-if ~exist(matfile_em, 'file')
-    % open a mat file for saving information
-    em_data = matfile(matfile_em, 'Writable', true);
-    save(matfile_em, 'options', 'MAX_LENGTH', '-v7.3');
+options.user_parallel = false; 
+if strcmpi(data_name, 'pinky40')  % convert the EM unit to um
+    options.scale_factor = 0.001*3.58/4;      
 else
-    em_data = matfile(matfile_em, 'Writable', true);
+    options.scale_factor = 0.001;      
 end
 
-% get all segments containing more than 15 fragments.
-% [segment_ids, n_fragments] = fetchn(aggr(ta3.Mesh,ta3.MeshFragment,'count(*)->n') & 'n>=10', ...
-%     'segment_id', 'n');
-[segment_ids_all,n_vertices_all]=fetchn(ta3.Mesh,ta3.MeshFragment,'segment_id','sum(n_vertices)->total_n_vertices');
-ind = find(n_vertices_all>6000);
-segment_ids = segment_ids_all(ind); 
-n_vertices = n_vertices_all(ind); 
+%% get all EM IDs and their number of vertices 
+if strcmpi(data_name, 'pinky40')
+    [segment_ids,n_vertices]=fetchn(ta3.Mesh,ta3.MeshFragment,...
+        'segment_id','sum(n_vertices)->total_n_vertices');
+else
+    rel = ta3p100.Mesh();
+    [segment_ids, n_vertices] = rel.fetchn('segment_id', 'n_vertices'); 
+end
 
-K = length(segment_ids);
-nticks = min(K, 100);
+% order segment_ids according to the number of vertices
+[n_vertices, idx] = sort(n_vertices, 'descend'); 
+segment_ids = segment_ids(idx); 
 
-num_array = ceil(K/MAX_LENGTH);
-dims_old = dims_2p;
-sub0 = [210, 70, 55];
-dims_new = [135, 280, 170];
-EM_masks = zeros(prod(dims_new), num_array, 'like', uint64(0));
-EM_info = zeros(K, 3);
+%% create voxelized EM components and save them into database 
+populate(ta3p100.VoxelizedMesh); 
 
-% voxelize neurons one by one 
-for m=1:K
-    % create a progress bar
-    if m==1
-        fprintf('loading EM data\n');
-        for mm=1:nticks
-            fprintf('|');
-        end
-        fprintf('\n');
-    end
-    id = segment_ids(m);
-    
-    % corrsponding bit
-    ii = ceil(m/MAX_LENGTH);
-    jj = 2^(mod(m-1, MAX_LENGTH));
-    
-    % fetch, voxelize and save
-    [vertices, faces] = fetchn(ta3.MeshFragment &  sprintf('segment_id=%d', id), 'vertices', 'triangles');
+%% select one neuron and check the visualization 
+if strcmpi(data_name, 'pinky40')
+    id = 24927722; 
+    str_id = sprintf('segment_id=%d', id); 
+    [vertices, faces] = fetchn(ta3.MeshFragment & str_id, 'vertices', 'triangles');
     
     [subs_2p, ~] = mesh2volume(vertices, faces, options);
-    em_segment = struct('vertices', {vertices}, 'faces', {faces});
-    eval(sprintf('em_data.cell_%d = em_segment;', id));
-    
-    ind_2p = sub2ind(dims_new, subs_2p(:,1)-sub0(1)+1, ...
-        subs_2p(:,2)-sub0(2)+1, subs_2p(:,3)-sub0(3)+1);
-    
-    EM_masks(ind_2p, ii) = EM_masks(ind_2p, ii) + jj; % the m-th bit is set as 1.
-    EM_info(m, :) = [id, length(faces), length(ind_2p)];
-    if round(m*nticks/K)~=round((m+1)*nticks/K)
-        fprintf('.');
-    end
+    ind = sub2ind(options.dims_2p, subs_2p(:,1), subs_2p(:,2), subs_2p(:,3));
+    V = zeros(options.dims_2p);
+    V(ind) = 1;
+else   
+    id = segment_ids(40);    
+    str_id = sprintf('segment_id=%d', id);
+    indices = fetch1(ta3p100.VoxelizedMesh & str_id, 'indices'); 
+    V = zeros(options.dims_2p); 
+    V(indices) = 1; 
 end
-fprintf('\n');
-em_data.EM_info = EM_info;
+
 
 %% save the EM masks slice by slices
 EM_masks = reshape(EM_masks, [dims_new, num_array]);
@@ -135,6 +96,4 @@ for zz=1:dims_2p(3)
 end
 
 em_data.em_ranges = em_ranges;
-
-
 

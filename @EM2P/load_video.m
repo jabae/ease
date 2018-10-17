@@ -20,17 +20,17 @@ function load_video(obj)
 %}
 
 %% code 
-
+video_mat_file = fullfile(obj.data_folder, obj.matfile_video); 
 % load video data
 if isempty(obj.video_data)
     % check the existance of video data
-    if ~exist(obj.matfile_video, 'file')
+    if ~exist(video_mat_file, 'file')
         % TBD
         ease_distribute_functional_data;
     end
     
     % map data
-    obj.video_data = matfile(obj.matfile_video, 'Writable', false);
+    obj.video_data = matfile(video_mat_file, 'Writable', false);
     obj.video_loader = obj.video_data.dl_videos;
     obj.video_shifts.ii = obj.video_data.shifts_ca_ii;
     obj.video_shifts.jj = obj.video_data.shifts_ca_jj;

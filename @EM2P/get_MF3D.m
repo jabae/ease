@@ -42,7 +42,9 @@ FOV_ = obj.FOV;
 matfile_mf3d = fullfile(obj.output_folder, ...
     sprintf('neurons_%d_%d_%d_%d.mat',...
     FOV_(1), FOV_(2), FOV_(3), FOV_(4)));
-
+folder_mf3d = fullfile(obj.output_folder, ...
+    sprintf('neurons_%d_%d_%d_%d',...
+    FOV_(1), FOV_(2), FOV_(3), FOV_(4)));
 % a marker indicating where the data has been processed already
 if ~exist(matfile_mf3d, 'file')
     flag_created = false(obj.num_scans, obj.num_blocks);
@@ -55,9 +57,10 @@ end
 %% load data directly
 if ~create_new
     % existed already
-    temp = load(matfile_mf3d, var_name); 
-    if ~isempty(fieldnames(temp))
-        neuron = eval(sprintf('temp.%s', var_name));
+    tmp_file = fullfile(folder_mf3d, sprintf('%s.mat', var_name)); 
+    if exist(tmp_file, 'file')
+        load(tmp_file, var_name); 
+        neuron = eval(var_name);
         return;
     else
         fprintf('the desired MF3D wrapper was not created yet. create a new one.\n');

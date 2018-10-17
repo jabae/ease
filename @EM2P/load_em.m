@@ -21,15 +21,16 @@ function load_em(obj)
 
 %% code 
 %% get the matfile information
+em_mat_file = fullfile(obj.data_folder, obj.matfile_em); 
 if isempty(obj.em_data)
     % check the existance of the EM matfile
-    if ~exist(obj.matfile_em, 'file')
-        %% TBD
-        %% ease_voxelize_em;
+    if ~exist(em_mat_file, 'file')
+        error('EM meshes have not been voxelized yet. You need stop everything and run ease_voxelize_em.m'); 
+        edit('ease_voxelize_em.m'); 
     end
     
     % map the data to memory
-    obj.em_data = matfile(obj.matfile_em, 'Writable', false);
+    obj.em_data = matfile(em_mat_file, 'Writable', false);
     obj.em_variables = who(obj.em_data, 'slice_*');
     obj.em_info = obj.em_data.EM_info;
     obj.em_ranges = obj.em_data.em_ranges;
@@ -47,7 +48,7 @@ if obj.em_load_flag
     else
         fprintf('loading the EM data into memory...\n');
         evalin('base', sprintf('em_data_mem=load(''%s'',''-regexp'',''^(?!cell_).*'');', ...
-            obj.matfile_em));
+            em_mat_file));
         fprintf('Done!\n\n');
     end
 else

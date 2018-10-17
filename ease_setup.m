@@ -30,8 +30,8 @@ if isempty(which('deconvolveCa.m'))
     try
         run(fullfile(EASE_dir, '..', 'OASIS_matlab', 'setup.m'));
     catch
-        disp('install oasis-matlab https://github.com/zhoupc/OASIS_matlab.git\n'); 
-        % download imaging data loader and install it
+        fprintf('install oasis-matlab https://github.com/zhoupc/OASIS_matlab.git\n'); 
+        % download oasis-matlab and install it
         % TBD
     end
 end

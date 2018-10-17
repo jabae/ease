@@ -21,7 +21,7 @@ function load_stack(obj)
 
 %% code 
 
-stack_data = matfile(obj.matfile_stack, 'Writable', false);
+stack_data = matfile(fullfile(obj.data_folder, obj.matfile_stack), 'Writable', false);
 
 if exist_in_workspace('stack_2p', 'base')
     % exist, skip it 

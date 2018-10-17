@@ -16,7 +16,7 @@ function [subs_2p, V] = mesh2volume(vertices, faces, options)
 %   subs_2p:  k*3 matrix, the indices for the voxels in 2p space 
 %   V:        3D matrix of the voxelized component 
 
-%% Author: Pengcheng Zhou, Columbia University, 2017
+%% Author: Pengcheng Zhou, Columbia University, 2018
 
 %% parameters 
 voxel_em = options.voxel_em;    %em resolution
@@ -33,34 +33,59 @@ if isempty(faces)
     V = 0; 
     return; 
 end 
-%% voxelize mesh surfaces 
-nz_voxels = cell(1, length(vertices));
-parfor seg_id = 1:length(vertices)
-    % convert the coordinates from EM space to 2p space 
-    tmp_vert = bsxfun(@plus, vertices{seg_id} * scale_factor * A, offset);
 
-    % the starting point 
+%% voxelize mesh surfaces
+if iscell(vertices)
+    nz_voxels = cell(1, length(vertices));
+    parfor seg_id = 1:length(vertices)
+        % convert the coordinates from EM space to 2p space
+        tmp_vert = bsxfun(@plus, vertices{seg_id} * scale_factor * A, offset);
+        
+        % the starting point
+        vert_0 = min(tmp_vert);
+        vert_range = max(tmp_vert)-vert_0+1;
+        
+        % voxelize
+        FV = struct('vertices', bsxfun(@minus, tmp_vert, vert_0), ...
+            'faces', faces{seg_id} + 1);
+        tmp_V = polygon2voxel(FV, round(vert_range./voxel_em), 'auto', false);
+        
+        %% determine the xyz locations of nonzero voxels
+        ind = find(tmp_V);
+        [x, y, z] = ind2sub(size(tmp_V), ind);
+        temp = bsxfun(@times, [x, y, z]-1, voxel_em);
+        nz_voxels{seg_id} = bsxfun(@plus, temp', vert_0');
+    end
+    % xyz positions of all nonzero voxels
+    subs = round(bsxfun(@times, cell2mat(nz_voxels), res_factor./voxels_2p')') + 1;
+else
+    % convert the coordinates from EM space to 2p space
+    tmp_vert = bsxfun(@plus, vertices * scale_factor * A, offset);
+    
+    % the starting point
     vert_0 = min(tmp_vert);
     vert_range = max(tmp_vert)-vert_0+1;
     
-    % voxelize 
+    % voxelize
     FV = struct('vertices', bsxfun(@minus, tmp_vert, vert_0), ...
-        'faces', faces{seg_id} + 1);
+        'faces', faces + 1);
     tmp_V = polygon2voxel(FV, round(vert_range./voxel_em), 'auto', false);
     
     %% determine the xyz locations of nonzero voxels
     ind = find(tmp_V);
     [x, y, z] = ind2sub(size(tmp_V), ind);
     temp = bsxfun(@times, [x, y, z]-1, voxel_em);
-    nz_voxels{seg_id} = bsxfun(@plus, temp', vert_0');
+    % xyz positions of all nonzero voxels
+    subs = round(bsxfun(@times, bsxfun(@plus, temp', vert_0'), ...
+        res_factor./voxels_2p')') + 1;
 end
 
 %% create a small volume for filling the empty holes
-% xyz positions of all nonzero voxels 
-subs = round(bsxfun(@times, cell2mat(nz_voxels), res_factor./voxels_2p')') + 1;
+
 volume_size = range(subs)+1;
 subs_0 = min(subs, [],1); 
 idx_new = bsxfun(@minus, subs, subs_0)+1;
+
 % get the indices of all nonzero voxels in the zoom-in space 
 ind_new = unique(sub2ind(volume_size, idx_new(:,1), idx_new(:,2), ...
     idx_new(:,3)));

@@ -10,8 +10,16 @@ classdef EM2P < handle
         % YAML file for storing the configurations
         yaml_path = '';
         
+        % data folder 
+        data_folder = ''; %folder for storing intermediate results 
         % output folder
         output_folder = '';
+        
+        % fig folder 
+        fig_folder = ''; % folder for saving figures 
+        
+        % video_folder 
+        video_folder = ''; %folder for savign videos 
         
         % video imaging data
         matfile_video = ''; % file path
@@ -31,6 +39,7 @@ classdef EM2P < handle
         stack_shifts = {};
         
         % coordinate conversion between EM and 2p stack data
+        registration_csv = ''; 
         matfile_transformation = '/data/lab/Dropbox/Tolias_PC/em_2p_pipeline/coor_convert.mat';
         
         % FOV information

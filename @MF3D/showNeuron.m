@@ -23,7 +23,7 @@ function showNeuron(obj, ind, orientation)
 
 %% code
 if ~exist('orientation', 'var') || isempty(orientation)
-    orientation = 'horizental';
+    orientation = 'horizontal';
 end
 ai = obj.reshape(obj.A(:, ind), 3);
 img_max = max(ai(:))*0.8;
@@ -41,7 +41,7 @@ vlim_corr = [0, img_max];
 ai = ai(4:(end-4), 4:(end-4), :);
 ai_em = ai_em(4:(end-4), 4:(end-4), :);
 ai_corr = ai_corr(4:(end-4), 4:(end-4), :);
-if strcmpi(orientation, 'horizental')
+if strcmpi(orientation, 'horizontal')
     h = 4*(d1+2) + d1/2;
     w = d3*(d2+2)+d2/5;
     
@@ -111,7 +111,7 @@ plot((1:T)/Fs, obj.C(ind, :), 'r', 'linewidth', 2);
 axis tight;
 temp = get(gca, 'ylim');
 set(gca, 'ylim', temp + [0, temp(2)*0.1]);
-legend('raw', 'denoised', 'orientation', 'horizental');
+legend('raw', 'denoised', 'orientation', 'horizontal');
 xlabel('Time (sec.)');
 
 end

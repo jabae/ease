@@ -1,6 +1,13 @@
-yaml_path: /data/home/zhoupc/github/ease_project/scripts/ease_config.yaml
-output_folder: /data/home/zhoupc/github/ease_project/scripts/results
-matfile_video: /data/paninski_lab/Tolias_lab/functional_data_analysis/functional_data.mat
+yaml_path: /data/home/zhoupc/github/ease_project/scripts/pinky100_config.yaml
+data_folder: /data/home/zhoupc/github/ease_project/data/pinky100
+output_folder: /data/home/zhoupc/github/ease_project/results/pinky100
+denoised_folder: cropped_denoised_video
+raw_folder: cropped_raw_video
+matfile_video: functional_data.mat
+matfile_stack: stack_2p.mat
+registration_csv: registration.csv
+matfile_transformation: coor_convert.mat
+matfile_em: em.mat
 video_shifts:
   ii:
   - [0.0, 0.0, -1.0]
@@ -39,11 +46,8 @@ video_zvals_updated:
 - [39.0, 29.0, 22.0]
 - [17.0, 6.0, 2.0]
 video_Fs: 15.0
-video_T: 8781.0
-denoised_folder: /data/paninski_lab/Tolias_lab/cropped_denoised/
-raw_folder: /data/paninski_lab/Tolias_lab/cropped/
+video_T: 9100.0
 use_denoise: false
-matfile_stack: /data/lab/Dropbox/Tolias_PC/em_2p_pipeline/data/functional_data/stack_2p.mat
 stack_shifts:
   ii:
   - [1.0, 1.0, 0.0]
@@ -63,7 +67,6 @@ stack_shifts:
   - [-1.0, 0.0, 0.0]
   - [0.0, 0.0, 0.0]
   - [0.0, 0.0, -1.0]
-matfile_transformation: /data/lab/Dropbox/Tolias_PC/em_2p_pipeline/coor_convert.mat
 d1: 59.0
 d2: 130.0
 d3: 3.0
@@ -80,15 +83,14 @@ range_2p: [400.0, 400.0, 310.0]
 scan_id: 1.0
 slice_id: 1.0
 block_id: 1.0
-options_init: {init_method: tf, order_statistics: thresh, min_similarity: 0.6, clear_results: true,
-  save_fig: true, K_candidate: 1000.0}
+options_init: {init_method: semi-NMF, order_statistics: ss3mad, min_similarity: 0.6,
+  clear_results: false, save_fig: false, K_candidate: 3000.0, show_fig: true, K_new: 50.0}
 init_method: regression
 show_init: true
 pause_init: false
 maxIter_init: 1.0
 show_em_only: false
 match_mask: true
-matfile_em: /data/paninski_lab/Tolias_lab/EM/em.mat
 em_shifts:
   ii:
   - [-2.0, -2.0, -3.0]
@@ -100,14 +102,14 @@ em_shifts:
   - [-2.0, -3.0, -3.0]
   - [-3.0, -3.0, -3.0]
   jj:
-  - [1.0, 1.0, 1.0]
-  - [1.0, 1.0, 0.0]
-  - [1.0, 0.0, 1.0]
-  - [0.0, 0.0, 0.0]
-  - [0.0, 1.0, 0.0]
-  - [-1.0, 0.0, 0.0]
-  - [0.0, 0.0, 0.0]
-  - [0.0, 0.0, -1.0]
+  - [3.0, 3.0, 3.0]
+  - [3.0, 3.0, 2.0]
+  - [3.0, 2.0, 3.0]
+  - [2.0, 2.0, 2.0]
+  - [2.0, 3.0, 2.0]
+  - [1.0, 2.0, 2.0]
+  - [2.0, 2.0, 2.0]
+  - [2.0, 2.0, 1.0]
 em_load_flag: true
 em_zblur: 6.0
 PACK_SIZE: 64.0
