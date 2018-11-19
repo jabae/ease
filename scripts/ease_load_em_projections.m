@@ -10,6 +10,10 @@ end
 
 %% project all EM segments to the scanning planes
 ease.get_Aem_scan();
-pixels_em = neuron.reshape(sum(Aem, 2)>0, 3);
+d1 = diff(ease.FOV(1:2)) + 1; 
+d2 = diff(ease.FOV(3:4)) + 1;
+d3 = ease.num_slices; 
+
+pixels_em = reshape(full(sum(Aem, 2)>0), d1, d2, d3);
 pixels_em = imerode(pixels_em, strel('disk', 2)); 
-pixels_em = neuron.reshape(pixels_em>0, 1); 
+pixels_em = sparse(reshape(pixels_em>0, [], 1)); 

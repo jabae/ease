@@ -10,4 +10,4 @@ neuron.initialize_em(Aem, [], ease.options_init);
 fprintf('Done\n\n'); 
 
 neuron.scores = neuron.calculate_matching_scores(Aem, 'sim');
-neuron.A_corr = neuron.calculate_corr();
+neuron.A_corr = neuron.calculate_corr(Y_cnmf);

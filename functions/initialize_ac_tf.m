@@ -52,6 +52,9 @@ Dv = diff(V, 2, 1);
 Y_p = Yin - (Yin*V) *V';
 
 %% iteratively update ai an dalpha
+if sum(ci)==0
+    ci = mean(Yin, 1); 
+end
 ci_p = ci - (ci*V) * V';
 for miter=1:maxIter
     % estimate ai
@@ -59,6 +62,12 @@ for miter=1:maxIter
     
     %% estimate ci_p
     ci_p = ((wi.*ai)'*Y_p) / ((wi.*ai)'*ai);
+    
+    if isnan(sum(ci_p)) || isnan(sum(ai))
+        ai = (Yin*ci') / (ci*ci'); 
+        return; 
+    end 
+        
 end
 
 %% find ci by smoothing its trend

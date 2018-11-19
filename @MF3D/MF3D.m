@@ -407,7 +407,12 @@ classdef MF3D < handle
         %% normalize data
         function [Y, Y_sn] = normalize_data(obj, Y, update_var)
             Y = double(obj.reshape(Y,1));
-            Y_sn = GetSn(bsxfun(@minus, Y, mean(Y, 2)));
+            if isempty(obj.P.sn)
+                Y_sn = GetSn(bsxfun(@minus, Y, mean(Y, 2)));
+                obj.P.sn = Y_sn; 
+            else
+                Y_sn = reshape(obj.P.sn, [], 1); 
+            end
             Y = bsxfun(@times, Y, 1./Y_sn);
             
             if ~exist('update_var', 'var') || isempty(update_var)

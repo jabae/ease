@@ -9,12 +9,13 @@ cell_id = min(cell_id, K_ca);
 set(ease.gui.text_cell_id, 'string', num2str(cell_id));
 
 %% show temporal activity
-axes(ease.gui.ax_activity); cla; hold on;
+cla(ease.gui.ax_activity);
+hold(ease.gui.ax_activity, 'on');
 if ~isempty(neuron.C_raw)
-    plot(neuron.C_raw(cell_id, :));
-    plot(neuron.C(cell_id, :));
+    plot(neuron.C_raw(cell_id, :), 'parent', ease.gui.ax_activity);
+    plot(neuron.C(cell_id, :), 'parent', ease.gui.ax_activity);
 else
-    plot(neuron.C(cell_id, :));
+    plot(neuron.C(cell_id, :), 'parent', ease.gui.ax_activity);
 end
 axis tight;
 

@@ -59,17 +59,18 @@ kernel_pars = cell(K,1);
 ind_del = false(K, 1);
 for miter=1:maxIter
     for k=1:K
-        if  aa(k)==0
-            C_raw(k, :) = C_raw(k, :)*0;
-            C(k,:) = C(k, :)*0;
-            S(k, :) = S(k, :)*0;
-            ind_del(k) = true;
-            continue;
-        end
         if ind_del
             continue;
         end
         temp = C(k, :) + (U(k, :)-V(k, :)*C)/aa(k);
+        if (aa(k)==0) || any(temp==0) || any(isnan(temp))
+            C_raw(k, :) = C_raw(k, :)*0;
+            C(k,:) = C(k, :)*0;
+            S(k, :) = S(k, :)*0;
+            ind_del(k) = true;
+            sn(k) = 1; 
+            continue;
+        end
         %remove baseline and estimate noise level
         %         [b_hist, sn_hist] = estimate_baseline_noise(temp);
         b = mean(temp(temp<median(temp)));
@@ -83,10 +84,11 @@ for miter=1:maxIter
         
         temp = temp -b;
         sn(k) = tmp_sn;
-        
+
         % deconvolution
         if obj.options.deconv_flag
             [ck, sk, deconv_options]= deconvolveCa(temp, deconv_options_0, 'maxIter', 2, 'sn', tmp_sn);
+
             smin(k) = deconv_options.smin;
             kernel_pars{k} = reshape(deconv_options.pars, 1, []);
             temp = temp - deconv_options.b;
