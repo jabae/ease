@@ -39,6 +39,7 @@ try
     dj.conn()
     fprintf('Database connected\n'); 
     clear dj_host dj_username dj_password; 
+    dj_connected = true; 
 catch
     error('No connection with the selected database.');
 end

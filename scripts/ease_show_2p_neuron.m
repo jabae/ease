@@ -17,7 +17,7 @@ if ~isempty(neuron.C_raw)
 else
     plot(neuron.C(cell_id, :), 'parent', ease.gui.ax_activity);
 end
-axis tight;
+axis(ease.gui.ax_activity, 'tight');
 
 %% show spatial components
 ssub = ease.ssub; 

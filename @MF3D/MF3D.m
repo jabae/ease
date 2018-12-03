@@ -107,11 +107,15 @@ classdef MF3D < handle
         end
         
         %% delete neurons
-        function delete(obj, ind)
+        function delete(obj, ind, add_to_black_list)
             % write the deletion into the log file
             if ~exist('ind', 'var') || isempty(ind)
                 return;
             end
+            if ~exist('add_to_black_list', 'var') || isempty(add_to_black_list)
+                add_to_black_list = false; 
+            end
+            
             if islogical(ind)
                 n_del = sum(ind(:));
             else
@@ -141,7 +145,9 @@ classdef MF3D < handle
             if ~isempty(obj.match_status.status)
                 % add these deleted neurons to a blacklist
                 temp = cell2mat(obj.match_status.em_ids(ind));
-                obj.black_list = unique([obj.black_list; reshape(temp, [], 1)]);
+                if add_to_black_list
+                    obj.black_list = unique([obj.black_list; reshape(temp, [], 1)]);
+                end
                 % delete
                 obj.match_status.status(ind) = [];
                 obj.match_status.em_ids(ind) = [];
@@ -160,7 +166,7 @@ classdef MF3D < handle
         Amask = determine_spatial_support(obj);
         
         %% update spatial components
-        update_spatial(obj, Y);
+        update_spatial(obj, Y, with_em);
         
         %% update temporal components
         [C_offset] = update_temporal(obj, Y, allow_deletion, wight_em);
@@ -299,6 +305,63 @@ classdef MF3D < handle
             scores = sparse(scores);
         end
         
+        %% evaluate matching performance
+        function confidence = evaluate_matching_confidence(obj, Aem, Yr)
+            % check the spatial mask 
+            if iscell(Aem)
+                Aem = obj.convert_matrix(Aem);
+            end
+            em_mask = (sum(Aem, 2)<=0);   % constrain to the area within the EM volume
+            Aem(em_mask, :) = []; 
+            %% compute correlation 
+            if ~exist('Yr', 'var') || isempty(Yr)
+                if isempty(obj.frame_range)
+                    Yr = evalin('base', 'Y_cnmf');
+                else
+                    temp = obj.frame_range;
+                    Yr = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+                end
+            end
+            Yres = obj.reshape(Yr, 1) - obj.A*obj.C - obj.b*obj.f;
+            Yres = bsxfun(@minus, Yres, mean(Yres, 2));
+            var_Yres = sum(Yres.^2, 2);
+            tmpA_corr = zeros(size(obj.A));
+            for m=1:size(obj.A, 2)
+                ci = obj.C(m, :);
+                ai = obj.A(:, m);
+                tmpA_corr(:, m) = (Yres*ci' + ai*(ci*ci')) ...
+                    ./sqrt(var_Yres+ai.^2*sum(ci.^2))/norm(ci, 2);
+            end
+            obj.A_corr = tmpA_corr; 
+          
+            %% compute matching score
+            A_ = obj.A;
+            A_(em_mask, :) = [];
+            A_(A_<=0) = 0;
+            P_ = obj.A; %obj.A_mask .* tmpA_corr;
+            P_(em_mask, :) = []; 
+            
+            temp1 = bsxfun(@times, A_'*(Aem>0), 1./sum(A_,1)'); % explained signal with different masks
+            temp2 = (P_'*Aem-mean(P_,1)'*mean(Aem,1)) ./ ...
+                (std(P_, 0, 1)'*std(Aem, 0, 1)); 
+            temp = temp1 .* temp2; 
+            temp(isnan(temp)) = 0;
+            obj.scores = sparse(temp); 
+            
+            %% compute matching confidence 
+            K = size(A_, 2); 
+            confidence = zeros(1, K);
+            for m=1:K 
+                em_id = obj.match_status.em_ids{m};
+                temp = obj.scores(m, :); 
+                v_select = temp(em_id);
+                temp(em_id) = -inf; 
+                v_others = max(temp); 
+                confidence(m) = v_select / v_others; 
+            end 
+            obj.match_status.confidence = confidence; 
+          end
+        
         %% initialization given EM masks
         ind_voxels_em = initialize_em(obj, Aem, Y, options, black_list, white_list);
         
@@ -306,7 +369,7 @@ classdef MF3D < handle
         C_ = deconvTemporal(obj, use_parallel, method_noise)
         
         %% run HALS
-        function hals(obj, Y)
+        function hals(obj, Y, weight_em, with_EM_info)
             if ~exist('Y', 'var') || isempty(Y)
                 if isempty(obj.frame_range)
                     Y = evalin('base', 'Y_cnmf');
@@ -314,6 +377,15 @@ classdef MF3D < handle
                     temp = obj.frame_range;
                     Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
                 end
+            end
+            if ~exist('weight_em', 'var') || isempty(weight_em)
+                weight_em = true; 
+            end
+            if ~exist('with_EM_info', 'var') || isempty(with_EM_info)
+                with_EM_info = true;
+            else
+                with_EM_info = false; 
+                weight_em = false; 
             end
             %% get the spatial range
             ind = obj.spatial_range;
@@ -323,8 +395,8 @@ classdef MF3D < handle
             
             %% run HALS
             obj.update_background(Y);
-            obj.update_temporal(Y, false, true);
-            obj.update_spatial(Y);
+            obj.update_temporal(Y, false, weight_em);
+            obj.update_spatial(Y, with_EM_info);
         end
         
         %% function remove false positives
@@ -380,6 +452,8 @@ classdef MF3D < handle
                     dd = reshape(dd, 1, []);
                     tree = linkage(dd, 'complete');
                     srt = optimalleaforder(tree, dd);
+                elseif strcmpi(srt, 'confidence')
+                    [~, srt] = sort(obj.match_status.confidence, 'descend');
                 else %if strcmpi(srt, 'snr')
                     snrs = var(obj.C, 0, 2)./var(obj.C_raw-obj.C, 0, 2);
                     [~, srt] = sort(snrs, 'descend');
@@ -398,6 +472,9 @@ classdef MF3D < handle
                 obj.match_status.em_ids = obj.match_status.em_ids(srt);
                 if ~isempty(obj.scores)
                     obj.scores = obj.scores(srt, :);
+                end
+                if ~isempty(obj.match_status.confidence)
+                    obj.match_status.confidence = obj.match_status.confidence(srt);
                 end
                 obj.A_corr = obj.A_corr(:, srt);
                 
@@ -465,7 +542,13 @@ classdef MF3D < handle
         C_ = decorrTemporal(obj, wd)
         
         %% show image
-        function showImage(obj, ai, orientation, vlim)
+        function showImage(obj, ai, orientation, vlim, pixel_size, color_scalebar)
+            if ~exist('pixel_size', 'var')
+                pixel_size = []; 
+            end
+            if ~exist('color_scalebar', 'var') || isempty(color_scalebar)
+                color_scalebar = 'w'; 
+            end 
             if iscell(ai)  % images one each plane are elements of the cell array
                 [d1, d2, ~] = size(ai{1});
                 d3 = length(ai);
@@ -475,6 +558,7 @@ classdef MF3D < handle
                 elseif ndims(ai) ~=3
                     ai = obj.reshape(ai, 3);
                 end
+               
                 [d1, d2, d3] = size(ai);
                 img_max = max(ai(:))*0.8;
                 if ~exist('vlim', 'var') || isempty(vlim)
@@ -484,10 +568,10 @@ classdef MF3D < handle
             if ~exist('orientation', 'var') || isempty(orientation)
                 orientation = 'vertical';
             end
-            if strcmpi(orientation, 'horizental')
+            if strcmpi(orientation, 'horizontal')
                 h = d1+2;
                 w = d3*(d2+2);
-                pos_ax = [1-(d2+2)/w, 1/h, d2/w, 1-2/h];
+                pos_ax = [1-(d2+1)/w, 1/h, d2/w, 1-2/h];
                 dpos = [-(d2+2)/w, 0, 0, 0];
             else
                 h = d3*(d1+2);
@@ -511,6 +595,13 @@ classdef MF3D < handle
                 box on;
                 set(gca, 'xtick', [], 'ytick', []);
                 pos_ax = pos_ax + dpos;
+                
+                if ~isempty(pixel_size) && (m==1) % draw scale bar 
+                    hold on; 
+                    plot(d2-3- [0, 20]/pixel_size, d1-[1,1]*3, 'color', color_scalebar, 'linewidth', 3);
+                  %  text(d2-5-20/pixel_size, d1-7, '20um', 'color', 'w', ...
+                   %     'fontsize', round(20/pixel_size/d2*75), 'fontweight', 'bold'); 
+                end 
             end
         end
         
@@ -713,6 +804,8 @@ classdef MF3D < handle
             
             %% temporal
             figure('papersize', [14, 4], 'name', 'temporal traces');
+            tmp_pos0 = get(gcf, 'position');
+            tmp_pos0(1:2) = [800, 0]; 
             init_fig;
             T = size(obj.C, 2);
             pos = [0.07, 0.64, 0.85, 0.35];
@@ -790,7 +883,7 @@ classdef MF3D < handle
                     ind(m) = true;
                 end
             end
-            obj.delete(ind);
+            obj.delete(ind, true);
         end
         
         %% select pairs to merge
@@ -849,6 +942,31 @@ classdef MF3D < handle
             [rot_angle, crange, rrange] = find_rotation(ind_nnz);
             img = imrotate(img, rot_angle);
             img = img(rrange(1):rrange(2), crange(1):crange(2), :, :);
+        end
+        
+        %% post process spatial shapes 
+        function post_process_spatial(obj, with_threshold)
+            if exist('with_threshold', 'var') && with_threshold
+                % compute residual 
+                sn = std(obj.compute_residual(), 0, 2); 
+                thresh = sn * (2./sqrt(sum(obj.C.^2, 2)'));
+                obj.A(obj.A<thresh) = 0; 
+            end
+        
+        
+            K = size(obj.A, 2);
+            for m=1:K
+                % keep pixels connecting to the spatial mask 
+                ai = obj.reshape(obj.A(:, m), 3);
+                ind = obj.reshape(obj.A_mask(:, m)>0, 3);
+                for n=1:3
+                    ind = (imdilate(ind, strel('square', 2)).*ai>0);
+                end
+                
+                % remove isolated pixels 
+                ind = (imfilter(double(ind), ones(3,3)) > 1); 
+                obj.A(:, m) = ai(:).*ind(:); 
+            end
         end
         
     end

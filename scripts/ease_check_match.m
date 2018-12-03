@@ -1,4 +1,4 @@
-%% check how well NMf component matches the EM component
+%% check how well NMF component matches the EM component
 set(ease.gui.text_em_current, 'string', num2str(em_rank));
 em_id = em_sort_id(em_rank);
 
