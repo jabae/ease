@@ -53,7 +53,11 @@ else
     show_fig = options.show_fig;
     K_candidate = options.K_candidate;
     K_new = options.K_new;
+    try 
     min_pnr = options.min_pnr;
+    catch 
+        min_pnr = 3; 
+    end
 end
 
 % order neurons and determine the list of candidate neurons
@@ -115,7 +119,7 @@ if clear_results
     tmp_f = tmp_f - mean(tmp_f);
     tmp_b = (Y*tmp_f')/(tmp_f*tmp_f');
     Y = obj.reshape(Y,1) - tmp_b*tmp_f;
-else
+elseif ~isempty(obj.b)
     Y = obj.reshape(Y, 1) - obj.A*obj.C - obj.b*obj.f;
 end
 
@@ -322,7 +326,7 @@ while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
     obj.C_raw(k_new,:) = ci_new_raw(:);
     obj.A(:, k_new) = ai_new(:);
     obj.C(k_new, :) = ci_new(:);
-    obj.A_mask(:, k_new) = ai(:);
+    obj.A_mask(:, k_new) = ai(:)*A_norm(ind_max);
     obj.ids(k_new) = em_ids(ind_max);
     obj.match_status.status(k_new) = 1;
     obj.match_status.confidence(k_new) = 5;

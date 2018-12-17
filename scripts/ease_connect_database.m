@@ -1,3 +1,7 @@
+if exist('dj_connected', 'var') && dj_connected
+    fprintf('the database has been connected. \nif you want to reconnect, set dj_connected=false first.\n');
+    return;
+end
 %% setup path
 addpath(genpath(fullfile(EASE_dir, 'packages', 'microns_phase1_nda')));
 addpath(genpath(fullfile(EASE_dir, 'packages', 'pipeline', 'matlab')));
@@ -5,6 +9,7 @@ addpath(genpath(fullfile(EASE_dir, 'packages', 'ta3')));
 addpath(genpath(fullfile(EASE_dir, 'packages', 'ta3p100')));
 
 %% database user account
+
 database_list = {'ninai.cluster-chjk7zcxhsgn.us-east-1.rds.amazonaws.com:3306', ...
     '127.0.0.1:3306'};
 

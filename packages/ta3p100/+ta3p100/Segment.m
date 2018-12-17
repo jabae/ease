@@ -1,6 +1,8 @@
 %{
 # Segment: a volumetric segmented object
-segment_id                  : bigint                        # unique segment id
+-> ta3p100.Segmentation
+-> ta3p100.Segmentation
+segment_id                  : bigint                        # segment id unique within each Segmentation
 %}
 
 

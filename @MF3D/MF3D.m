@@ -73,6 +73,7 @@ classdef MF3D < handle
         dataloader_raw = [];  % data loader for the raw data
         
         scores = [];  % matching scores
+        tuning_curve = {}; % tuning curve of each neuron 
     end
     
     %% methods
@@ -394,6 +395,7 @@ classdef MF3D < handle
             end
             
             %% run HALS
+%             obj.update_temporal(Y, false, weight_em);
             obj.update_background(Y);
             obj.update_temporal(Y, false, weight_em);
             obj.update_spatial(Y, with_EM_info);
@@ -714,7 +716,7 @@ classdef MF3D < handle
         end
         
         %%
-        function [img, col0, AA] = overlapA(obj, ind, ratio, bg_white, use_em)
+        function [img, col0, AA] = overlapA(obj, ind, ratio, bg_white, use_em, zoomin)
             %merge all neurons' spatial components into one singal image
             if ~exist('use_em', 'var') || isempty(use_em)
                 use_em = false;
@@ -726,48 +728,51 @@ classdef MF3D < handle
             end
             if nargin<2 || isempty(ind)
                 AA = A_;
+                CC = obj.C; 
+                CC_raw = obj.C_raw; 
+                confidence = obj.match_status.confidence; 
             else
                 AA = A_(:, ind);
+                CC = obj.C(ind,:);
+                CC_raw = obj.C_raw(ind,:); 
+                confidence = obj.match_status.confidence(ind);
             end
+            snr = var(CC, 0, 2) ./var(CC_raw-CC, 0, 2); 
+            snr(isnan(snr)) = 0; 
+            
             if ~exist('ratio', 'var')||isempty(ratio)
-                ratio = 0.3;
+                ratio = 0.1;
             end
             if ~exist('bg_white', 'var') || isempty(bg_white)
                 bg_white = false;
             end
             d3 = obj.options.d3;
-            v_max = 1;
             
             %% normalize the amplitude of each neuron
-            %             for m=1:size(AA, 2)
-            %                 AA(:, m) = scale_image(AA(:, m));
-            %             end
-            AA = bsxfun(@times, AA, v_max./max(AA,[],1));
+            AA = bsxfun(@times, AA, 1./max(AA, [],1));
             AA(bsxfun(@lt, AA, max(AA, [], 1)*ratio)) = 0;
+%             AA = bsxfun(@times, AA, sqrt(snr)'); 
+AA = bsxfun(@times, AA, (snr.^0.5)'); 
             [d, K] = size(AA);
             
-            if K==2
-                col = [4, 2];
-            elseif K==3
-                col = [4, 2, 1];
-            else
-                col = randi(6, 1, K);
-            end
+            col = prism(K);
+            col = col(randperm(K),:); 
             if bg_white
-                col = 7-col;
+                col = 1-col;
             end
-            col = 1:4; 
+            
             col0 = col;
             img = zeros(d, 3);
-            for m=3:-1:1
-                img(:, m) = sum(bsxfun(@times, AA, mod(col, 2)), 2);
-                col = floor(col/2);
-            end
+            img = AA * col; 
             temp = img/max(img(:))*(2^16);
             temp = uint16(temp);
             if bg_white
                 temp = 2^16-temp;
+            elseif ~isempty(obj.spatial_range) 
+                temp(~obj.spatial_range, :) = 2^16;
             end
+            
+            % rotate and zoomin 
             temp = obj.reshape(temp, 3);
             img = cell(1, d3);
             for m=1:d3
@@ -854,6 +859,9 @@ classdef MF3D < handle
         
         %% get EM ids
         function em_ids = get_em_ids(obj, ind, em_info)
+            if isempty(ind)
+                ind = 1:size(obj.A,2); 
+            end
             ind = cell2mat(obj.match_status.em_ids(ind));
             em_ids = em_info(ind, 1);
         end
@@ -944,6 +952,23 @@ classdef MF3D < handle
             img = img(rrange(1):rrange(2), crange(1):crange(2), :, :);
         end
         
+        %% compute tuning curves for all neurons 
+        function compute_tuning_curve(obj, stimuli, sig)
+            if ~exist('sig', 'var') || isempty(sig)
+                sig = pi/10; 
+            end
+            bins_nan = isnan(stimuli);
+            ori = stimuli(~bins_nan);
+            
+            x = reshape(unique(ori), [], 1);
+            temp = bsxfun(@minus, x, reshape(ori, 1, []));
+            temp = mod(temp+pi, 2*pi) - pi; % x axis is a circle
+            y = exp(-(temp).^2 / (2*sig^2)) * obj.S(:, ~bins_nan)';
+            
+            y = bsxfun(@times, y, 1./sum(y, 1));
+            
+            obj.tuning_curve = struct('x', x, 'y', y); 
+        end 
         %% post process spatial shapes 
         function post_process_spatial(obj, with_threshold)
             if exist('with_threshold', 'var') && with_threshold

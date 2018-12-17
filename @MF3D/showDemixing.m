@@ -65,12 +65,14 @@ img_height = diff(rot_ylim);
 
 
 % play movies
-figure('papersize', [img_width*nc, img_height*nr*2]/...
-    max(img_height*nr,img_width*nc)*10);
-width = round(img_width*nc/max(img_height*nr,img_width*nc)*1000);
-height =round(img_height*nr*1.4/max(img_height*nr, img_width*nc)*1000);
+width = round(img_width*nc*3/(0.99-(nc-1)*0.005)); 
+height = round(img_height*nr*3/(0.99-(nr-1)*0.01));
+figure('papersize', 7*[width, height]/max([width, height]));
+% width = round(img_width*nc/max(img_height*nr,img_width*nc)*1000);
+% height =round(img_height*nr*1.2/max(img_height*nr, img_width*nc)*1000);
+
 set(gcf, 'position', [100, 100, width, height], 'visible', fig_visible);
-ha = tight_subplot(nr, nc);
+ha = tight_subplot(nr, nc, [0.01, 0.005], 0.005, 0.005);
 ha = reshape(ha, nc, nr);
 if ~exist('col_map', 'var') || isempty(col_map)
     col_map = jet;
@@ -128,8 +130,8 @@ if sort_frames
 else
     tt = 1:T;
 end
-kt = 2;
-k_res = 2;
+kt = 3;
+k_res = 1;
 min_max_y = min_max;
 fprintf('writing the demixing videos...\nProgress bar:\n');
 for mframe=1:100
@@ -153,8 +155,8 @@ for mframe=1:kt:T
         end
         set(ha(z,1), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
         if z==1
-            text(rot_xlim(1), rot_ylim(1)+3, sprintf('raw data (1x, [%d, %d])', min_max_y(1), ...
-                min_max_y(2)), 'fontsize', 12, 'fontweight', 'bold', 'color', 'm','parent', ha(z, 1))
+            text(rot_xlim(1), rot_ylim(1)+3, sprintf('raw data ([%d, %d])', min_max_y(1), ...
+                min_max_y(2)), 'fontsize', 12, 'fontweight', 'bold', 'color', 'w','parent', ha(z, 1))
         end
         
         % show background
@@ -166,10 +168,10 @@ for mframe=1:kt:T
         end
         set(ha(z,2), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
         if z==1
-            text(rot_xlim(1), rot_ylim(1)+3, ...
-                sprintf('background (1x, [%d, %d])', min_max_y(1), ...
+           text(rot_xlim(1), rot_ylim(1)+3, ...
+                sprintf('background ([%d, %d])', min_max_y(1), ...
                 min_max_y(2)), 'fontsize', 12, 'fontweight', 'bold', ...
-                'color', 'm', 'parent', ha(z,2));
+                'color', 'w', 'parent', ha(z,2));
         end
         
         % background subtracted video
@@ -184,9 +186,9 @@ for mframe=1:kt:T
         
         if z==1
                text(rot_xlim(1), rot_ylim(1)+3, ...
-                   sprintf('BG-subtracted (1x, [%d, %d])',...
+                   sprintf('BG-subtracted ([%d, %d])',...
                    min_max(1), min_max(2)), 'fontsize', 12, 'fontweight', ...
-                   'bold', 'color', 'm','parent', ha(z, 3))
+                   'bold', 'color', 'w','parent', ha(z, 3))
         end
         
         % denoised video
@@ -198,9 +200,9 @@ for mframe=1:kt:T
         end
         set(ha(z,4), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
         if z==1
-            text(rot_xlim(1), rot_ylim(1)+3, sprintf('denoised (1x, [%d, %d])', min_max(1), ...
+            text(rot_xlim(1), rot_ylim(1)+3, sprintf('denoised ([%d, %d])', min_max(1), ...
                 min_max(2)), 'fontsize', 12, 'fontweight', 'bold',...
-                'color', 'm','parent', ha(z, 4));
+                'color', 'w','parent', ha(z, 4));
         end
         
         % residual
@@ -215,8 +217,8 @@ for mframe=1:kt:T
         if z==1
             temp = (min_max - mean(min_max))/k_res;
             text(rot_xlim(1), rot_ylim(1)+3, ...
-                sprintf('residual (%dx, [%d, %d])', k_res, temp(1), temp(2)),...
-                'color', 'm', 'fontsize', 12, ...
+                sprintf('residual ([%d, %d])', temp(1), temp(2)),...
+                'color', 'k', 'fontsize', 12, ...
                 'fontweight', 'bold','parent', ha(z, 5));
         end
         
@@ -230,10 +232,11 @@ for mframe=1:kt:T
         set(ha(z,6), 'xlim', rot_xlim, 'xtick', [], 'ylim', rot_ylim, 'ytick', []);
         
         if z==1
-            text(rot_xlim(1), rot_ylim(1)+3, ...
-                sprintf('demixed (1x, [%d, %d])',...
-                min_max(1), min_max(2)), 'color', 'm', 'parent', ha(z, 6),...
-                'fontsize', 12, 'fontweight', 'bold');
+            text(rot_xlim(1), rot_ylim(1)+3,'demixed', 'color', 'w', ...
+                'parent', ha(z, 6),'fontsize', 12, 'fontweight', 'bold');
+%                 sprintf('demixed ([%d, %d])',...
+%                 min_max(1), min_max(2)), 'color', 'w', 'parent', ha(z, 6),...
+%                 'fontsize', 12, 'fontweight', 'bold'); 
         end
         if z==3
             if isnan(obj.Fs)
