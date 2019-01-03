@@ -25,127 +25,33 @@ else
     options.scale_factor = 0.001;      
 end
 
-%% get all EM IDs and their number of vertices 
-if strcmpi(data_name, 'pinky40')
-    [segment_ids,n_vertices]=fetchn(ta3.Mesh,ta3.MeshFragment,...
-        'segment_id','sum(n_vertices)->total_n_vertices');
-else
-    rel = ta3p100.Mesh();
-    [segment_ids, n_vertices] = rel.fetchn('segment_id', 'n_vertices'); 
-end
+%% voxelize all EM meshes 
+parpopulate(rel_voxels); 
 
-% order segment_ids according to the number of vertices
-% [n_vertices, idx] = sort(n_vertices, 'descend'); 
-% segment_ids = segment_ids(idx); 
-%%
-[segment_ids, ~] = sort(segment_ids); 
-n_segment = length(segment_ids);
-batch_size = 100; 
-for idx = 1:batch_size:n_segment
-    % create range 
-    id_range = sprintf('segment_id>=%d and segment_id<%d', segment_ids(idx), ...
-        segment_ids(min(idx+batch_size, n_segment)));
-    
-    % load vertices & triangles 
-    [segment_id, vertices, triangles] = fetchn(ta3p100.Mesh & id_range, 'segment_id', ...
-        'vertices', 'triangles');
-    
-    % voxelize it 
-end 
+%% collect EM information 
+[segment_id, indices] = fetchn(rel_voxels, 'segment_id', 'indices');
+EM_info = [segment_id, cellfun(@length, indices)];
 
-%% create voxelized EM components and save them into database 
-%parpopulate(ta3p100.VoxelizedMesh); 
-% 
-
-
-%%
-max_stack = max(stack_2p(:)); 
-for idx=1:1000
-    id = segment_ids(idx);
-    str_id = sprintf('segment_id=%d', id);
-    populate(ta3p100.VoxelizedMesh, str_id);
-end
-
-%     V = zeros(options.dims_2p);
-%     V(indices) = 1;
-%     clf; 
-%     for m=50:230
-%         temp = V(:, :, m);
-%         img(:, :, 1) = temp/max(temp(:))*0.5;
-%         subplot(131);
-%         imagesc(temp);
-%         axis equal off tight;
-%         temp = stack_2p(:, :, m);
-%         img(:, :, 2) = temp/max_stack;
-%         subplot(132);
-%         imagesc(temp);
-%         axis equal off tight;
-%         subplot(133);
-%         imagesc(img);
-%         axis equal off tight;
-%         title(sprintf('z=%d', m));
-%         pause;
-%     end
-% end
-
-%% select one neuron and check the visualization 
-if strcmpi(data_name, 'pinky40')
-    id = 24927722; 
-    str_id = sprintf('segment_id=%d', id); 
-    [vertices, faces] = fetchn(ta3.MeshFragment & str_id, 'vertices', 'triangles');
-    
-    [subs_2p, ~] = mesh2volume(vertices, faces, options);
-    ind = sub2ind(options.dims_2p, subs_2p(:,1), subs_2p(:,2), subs_2p(:,3));
-    V = zeros(options.dims_2p);
-    V(ind) = 1;
-else   
-    id = segment_ids(199);    
-    str_id = sprintf('segment_id=%d', id);
-    try 
-        indices = fetch1(ta3p100.VoxelizedMesh & str_id, 'indices');
-    catch
-        parpopulate(ta3p100.VoxelizedMesh, str_id)
+% determine EM ranges 
+[y, x, z] = ind2sub(options.dims_2p, unique(cell2mat(indices))); 
+em_ranges = cell(options.dims_2p(3), 1);
+for zz=1:options.dims_2p(3)
+    ind = (z==zz); 
+    if ~isempty(ind)
+        tmp_y = y(ind);
+        tmp_x = x(ind);
+        k = boundary(tmp_x,tmp_y,0);
+        em_ranges{zz} = [tmp_y(k), tmp_x(k)];       
     end
-    V = zeros(options.dims_2p);
-    V(indices) = 1; 
-    figure; 
-    imagesc(sum(V, 3)); 
+    if mod(zz, 10)==0
+        disp(zz); 
+    end
 end
-% 
-% 
-% %% save the EM masks slice by slices
-% EM_masks = reshape(EM_masks, [dims_new, num_array]);
-% em_ranges = cell(dims_2p(3), 1);
-% for m=1:dims_new(3)
-%     temp = reshape(EM_masks(:, :, m, :),  dims_new(1) * dims_new(2), num_array);
-%     [ii, jj, v] = find(temp);
-%     if ~isempty(ii)
-%         [y, x] = ind2sub(dims_new(1:2), ii);
-%         % get the spatial ranges
-%         k = boundary(x, y, 0);
-%         em_ranges{m+sub0(3)-1} = [y(k)+sub0(1)-1, x(k)+sub0(2)-1];
-%         
-%         % save the nonzero voxels
-%         ii = sub2ind(dims_2p(1:2), y+sub0(1)-1, x+sub0(2));
-%         temp = [ii, jj, v]; % save a sparse matrix
-%         eval(sprintf('em_data.slice_%d = temp;', m+sub0(3)-1));    
-%     end
-% end
-% 
-% em_data.em_ranges = em_ranges;
-% 
-% %%
-% em_ranges = cell(dims_2p(3), 1);
-% for zz=1:dims_2p(3)
-%     tmp_str = sprintf('slice_%d', zz);
-%     if ismember(tmp_str, em_variables)
-%         temp = eval([em_nam, '.', tmp_str]);
-%         [y, x] = ind2sub(dims_2p(1:2), temp(:,1));
-%         k = boundary(x,y,0); 
-%         em_ranges{zz} = [y(k), x(k)]; 
-% 
-%     end
-% end
-% 
-% em_data.em_ranges = em_ranges;
 
+
+EM_data.EM_info = EM_info; 
+EM_data.options = options; 
+EM_data.em_ranges = em_ranges;
+
+save(fullfile(ease.data_folder, ease.matfile_em), 'EM_info', 'options', 'em_ranges',...
+    '-v7.3'); 

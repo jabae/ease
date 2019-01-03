@@ -44,7 +44,7 @@ classdef MF3D < handle
         % status = -1, 0, it's []
         % status = 1, it's a scalar storing the matching ID
         % status = n, it's an array of all EM IDs
-        
+        whitelist = [];  % add the neuron to white list (yes 1; no 0)
         labels = [];   % label the neuron as soma(1) or dendrite(2)
         tags;       % tags bad neurons with multiple criterion using a 16 bits number
         % ai indicates the bit value of the ith digits from
@@ -74,6 +74,7 @@ classdef MF3D < handle
         
         scores = [];  % matching scores
         tuning_curve = {}; % tuning curve of each neuron 
+        
     end
     
     %% methods
@@ -280,30 +281,36 @@ classdef MF3D < handle
         
         %% calculate the matching score between all neuron shapes and EM components
         function scores = calculate_matching_scores(obj, Aem, method)
+            % check the spatial mask
             if iscell(Aem)
                 Aem = obj.convert_matrix(Aem);
             end
             em_mask = (sum(Aem, 2)<=0);   % constrain to the area within the EM volume
-            
-            % compute matching score
+            Aem(em_mask, :) = [];
+            n = size(Aem, 1);
+            Aem_sum = sum(Aem, 1);
+            Aem_std = sqrt(sum(Aem.^2,1) - (Aem_sum.^2/n));
+
+            %% compute matching score
             A_ = obj.A;
-            A_(em_mask, :) = 0;
+            A_(em_mask, :) = [];
             A_(A_<=0) = 0;
-            Asum_em = sum(Aem, 1);      %   1*K_em
-            AAsum_em = sum(Aem.^2, 1);  % 	1*K_em
-            Asum_2p = sum(A_, 1);    %   1*K_2p
-            AAsum_2p = sum(A_.^2, 1);%   1*K_2p
-            AAsum_em2p = A_' * Aem;  % K_2p * K_em
-            d = size(obj.A, 1);
+            P_ = obj.A; %obj.A_mask .* tmpA_corr;
+            P_(em_mask, :) = [];
+            P_sum = sum(P_, 1);
+            P_std = sqrt(sum(P_.^2, 1) - (P_sum.^2/n));
             
-            if strcmpi(method, 'corr')
-                scores = (AAsum_em2p - Asum_2p' * Asum_em/d) ./...
-                    (sqrt(AAsum_2p'-(Asum_2p.^2)'/d) * sqrt(AAsum_em-(Asum_em.^2)/d) );
-            else % strcmpi(method, 'sim')
-                scores = AAsum_em2p./(sqrt(AAsum_2p)' * sqrt(AAsum_em));
-            end
-            scores(:, Asum_em==0) = 0;
-            scores = sparse(scores);
+            temp1 = bsxfun(@times, A_'*(Aem>0), 1./sum(A_,1)'); % explained signal with different masks
+            %             temp2 = (P_'*Aem-mean(P_,1)'*mean(Aem,1)) ./ ...
+            %                 (std(P_, 0, 1)'*std(Aem, 0, 1));
+            temp2 = P_'*Aem - P_sum'*(Aem_sum/n);
+            temp2 = bsxfun(@times, temp2, 1./P_std'); 
+            temp2 = bsxfun(@times, temp2, 1./Aem_std); 
+            
+            temp = temp1 .* temp2;
+            temp(isnan(temp)) = 0;
+            scores = sparse(temp);
+            obj.scores = scores; 
         end
         
         %% evaluate matching performance
@@ -313,7 +320,11 @@ classdef MF3D < handle
                 Aem = obj.convert_matrix(Aem);
             end
             em_mask = (sum(Aem, 2)<=0);   % constrain to the area within the EM volume
-            Aem(em_mask, :) = []; 
+            Aem(em_mask, :) = [];
+            n = size(Aem, 1);
+            Aem_sum = sum(Aem, 1);
+            Aem_std = sqrt(sum(Aem.^2,1) - (Aem_sum.^2/n));
+
             %% compute correlation 
             if ~exist('Yr', 'var') || isempty(Yr)
                 if isempty(obj.frame_range)
@@ -329,9 +340,10 @@ classdef MF3D < handle
             tmpA_corr = zeros(size(obj.A));
             for m=1:size(obj.A, 2)
                 ci = obj.C(m, :);
+                ci = ci - mean(ci); 
                 ai = obj.A(:, m);
                 tmpA_corr(:, m) = (Yres*ci' + ai*(ci*ci')) ...
-                    ./sqrt(var_Yres+ai.^2*sum(ci.^2))/norm(ci, 2);
+                    ./sqrt(var_Yres+(ai.^2)*(ci*ci'))/sqrt(ci*ci'); % approximate the variance
             end
             obj.A_corr = tmpA_corr; 
           
@@ -340,11 +352,15 @@ classdef MF3D < handle
             A_(em_mask, :) = [];
             A_(A_<=0) = 0;
             P_ = obj.A; %obj.A_mask .* tmpA_corr;
-            P_(em_mask, :) = []; 
+            P_(em_mask, :) = [];
+            P_sum = sum(P_, 1);
+            P_std = sqrt(sum(P_.^2, 1) - (P_sum.^2/n));
             
             temp1 = bsxfun(@times, A_'*(Aem>0), 1./sum(A_,1)'); % explained signal with different masks
-            temp2 = (P_'*Aem-mean(P_,1)'*mean(Aem,1)) ./ ...
-                (std(P_, 0, 1)'*std(Aem, 0, 1)); 
+            temp2 = P_'*Aem - P_sum'*(Aem_sum/n);  % a faster way of computing correlation coefficients
+            temp2 = bsxfun(@times, temp2, 1./P_std'); 
+            temp2 = bsxfun(@times, temp2, 1./Aem_std); 
+          
             temp = temp1 .* temp2; 
             temp(isnan(temp)) = 0;
             obj.scores = sparse(temp); 
@@ -487,7 +503,8 @@ classdef MF3D < handle
         function [Y, Y_sn] = normalize_data(obj, Y, update_var)
             Y = double(obj.reshape(Y,1));
             if isempty(obj.P.sn)
-                Y_sn = GetSn(bsxfun(@minus, Y, mean(Y, 2)));
+                T = min(size(Y, 2), 5000); 
+                Y_sn = GetSn(bsxfun(@minus, Y(:, 1:T), mean(Y(:, 1:T), 2)));
                 obj.P.sn = Y_sn; 
             else
                 Y_sn = reshape(obj.P.sn, [], 1); 
@@ -749,14 +766,15 @@ classdef MF3D < handle
             d3 = obj.options.d3;
             
             %% normalize the amplitude of each neuron
-            AA = bsxfun(@times, AA, 1./max(AA, [],1));
+            v_norm = max(AA, [], 1); 
+            AA = bsxfun(@times, AA, 1./v_norm); %sqrt(sum(AA.^2,1)));
             AA(bsxfun(@lt, AA, max(AA, [], 1)*ratio)) = 0;
-%             AA = bsxfun(@times, AA, sqrt(snr)'); 
-AA = bsxfun(@times, AA, (snr.^0.5)'); 
+%             AA = bsxfun(@times, AA, sqrt(snr)');
+            %             AA = bsxfun(@times, AA, (snr.^0.5)');
             [d, K] = size(AA);
             
             col = prism(K);
-            col = col(randperm(K),:); 
+            col = col(randperm(K),:);
             if bg_white
                 col = 1-col;
             end
@@ -769,7 +787,7 @@ AA = bsxfun(@times, AA, (snr.^0.5)');
             if bg_white
                 temp = 2^16-temp;
             elseif ~isempty(obj.spatial_range) 
-                temp(~obj.spatial_range, :) = 2^16;
+                temp(~obj.spatial_range, :) = 0;
             end
             
             % rotate and zoomin 
@@ -953,22 +971,56 @@ AA = bsxfun(@times, AA, (snr.^0.5)');
         end
         
         %% compute tuning curves for all neurons 
-        function compute_tuning_curve(obj, stimuli, sig)
-            if ~exist('sig', 'var') || isempty(sig)
-                sig = pi/10; 
-            end
+        function compute_tuning_curve(obj, stimuli)%, sig)
+%             if ~exist('sig', 'var') || isempty(sig)
+%                 sig = pi/10; 
+%             end
             bins_nan = isnan(stimuli);
             ori = stimuli(~bins_nan);
             
             x = reshape(unique(ori), [], 1);
-            temp = bsxfun(@minus, x, reshape(ori, 1, []));
-            temp = mod(temp+pi, 2*pi) - pi; % x axis is a circle
-            y = exp(-(temp).^2 / (2*sig^2)) * obj.S(:, ~bins_nan)';
-            
+%             temp = bsxfun(@minus, x, reshape(ori, 1, []));
+%             temp = mod(temp+pi, 2*pi) - pi; % x axis is a circle
+%             y = exp(-(temp).^2 / (2*sig^2)) * obj.S(:, ~bins_nan)';
+            y = bsxfun(@eq, x, reshape(ori, 1, [])) * obj.S(:, ~bins_nan)'; 
             y = bsxfun(@times, y, 1./sum(y, 1));
             
             obj.tuning_curve = struct('x', x, 'y', y); 
         end 
+        
+        %% bootstrap tuning curves
+        function boostrap_tuning_curve(obj, shuffle)
+            K = size(obj.A, 2);
+            if  isempty(obj.tuning_curve) || K~=size(obj.tuning_curve.y, 2)
+                error('computing tuning curve first!');
+            else
+                tc = obj.tuning_curve;
+            end
+            if ~exist('shuffle', 'var') || isempty(shuffle)
+                shuffle = [];
+            end
+            tc.shuffle = shuffle; 
+            tc.yfit = zeros(size(tc.y));
+            tc.pars = zeros(5, K);
+            tc.rss = zeros(1, K);
+            tc.pvals = zeros(1, K);
+            for m=1:K
+                fprintf('|'); 
+            end
+            fprintf('\n');
+            for m=1:K
+                if isempty(shuffle)
+                    [tc.yfit(:, m), tc.pars(:, m), tc.rss(m)] =...
+                        fit_von_mises2(tc.x, tc.y(:, m));
+                else
+                    [tc.yfit(:, m), tc.pars(:, m), tc.rss(m), tc.pvals(m)] =...
+                        bootstrap_von_mises2(tc.x, tc.y(:, m), shuffle);
+                end
+                fprintf('.');
+            end
+            fprintf('\n');
+            obj.tuning_curve = tc;
+        end
         %% post process spatial shapes 
         function post_process_spatial(obj, with_threshold)
             if exist('with_threshold', 'var') && with_threshold
@@ -994,6 +1046,39 @@ AA = bsxfun(@times, AA, (snr.^0.5)');
             end
         end
         
+        %% merge repeated extraction 
+        function merge_repeats(obj)
+            em_ids = cell2mat(obj.match_status.em_ids); 
+            unique_ids = unique(em_ids); 
+            [tmp_count, unique_ids] = hist(em_ids, unique_ids); 
+            idx = find(tmp_count>1);    % find EM components that have repeated extraction
+            if ~isempty(idx)
+                for m=1:length(idx)
+                    tmp_id = unique_ids(idx(m)); 
+                    ind = find(em_ids==tmp_id);
+                    wi = obj.A_mask(:, ind(1)); 
+                    tmp_A = obj.A(:, ind); 
+                    tmp_Craw = obj.C_raw(ind, :);
+                    temp = sum(tmp_A,1) .*sum(obj.C(ind,:), 2)'; % use the largest neuron as initialization
+                    [~, tmp_ind] = max(temp); 
+                    ai = tmp_A(:, tmp_ind); 
+                    for miter=1:10        
+                        %% estimate ci
+                        ci = ((wi.*ai)'*tmp_A*tmp_Craw) / ((wi.*ai)'*ai);
+                        
+                        % estimate ai
+                        ai = max(0, tmp_A*(tmp_Craw*ci') / (ci*ci'));  % ai >= 0              
+                    end
+                    obj.A(:, ind(1)) = ai; 
+                    obj.C_raw(ind(1), :) = ci; 
+                    obj.C(ind(1), :) = ci; 
+                    obj.match_status.confidence(ind(2:end)) = 0; 
+                end
+                ind = find(obj.match_status.confidence==0) ; 
+                obj.delete(ind); 
+            end
+            
+        end
     end
 end
 

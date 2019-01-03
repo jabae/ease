@@ -41,6 +41,7 @@ if ~exist('Y', 'var') || isempty(Y)
     end
 end
 Y = double(obj.reshape(Y, 1));
+Y(~obj.spatial_range(:), :) = 0;  % remove pixels outside of EM volume
 d1 = obj.options.d1;
 d2 = obj.options.d2;
 d3 = obj.options.d3;

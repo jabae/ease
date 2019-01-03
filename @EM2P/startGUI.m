@@ -7,7 +7,8 @@ w1_ = 100;
 w2_ = 25;
 w4_ = 55;
 w5_ = 80; 
-w3_ = obj.d2*1.8;
+scale = 100/obj.d1; 
+w3_ = obj.d2*scale;
 dw1_ = 3;
 % dw2_ = 1;
 dw3_ = 10;
@@ -15,9 +16,9 @@ dw3_ = 10;
 h1_ = 20;
 dh1_ = 5;
 h2_ = 80;
-h3_ = obj.d1*1.8;
+h3_ = obj.d1*scale;
 
-w0 = 50;
+w0 = 40;
 h0 = 850;
 font_size = 11;
 
@@ -132,7 +133,7 @@ pos_btn_em_only = pos_check_em + [w2_*0.7, 0, w1_-w2_, 0];
 % the main figure
 x0_fig = 50;
 y0_fig = 100;
-w_fig = max(pos_btn_load_em(1)+w1_, pos_ax_em{1}(1)+w3_)+3;
+w_fig = max(pos_btn_load_em(1)+w1_, pos_block_right(1)+w2_)+5;
 h_fig = 900;
 pos_fig = [x0_fig, y0_fig, w_fig, h_fig];
 

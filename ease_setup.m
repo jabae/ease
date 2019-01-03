@@ -4,6 +4,7 @@ addpath(EASE_dir);
 addpath(fullfile(EASE_dir, 'scripts'));
 addpath(fullfile(EASE_dir, 'packages'));
 addpath(fullfile(EASE_dir, 'packages', 'mesh2volume'));
+addpath(fullfile(EASE_dir, 'packages', 'von_mises_fit'));
 addpath(fullfile(EASE_dir, 'packages', 'reduce_poly'));
 addpath(fullfile(EASE_dir, 'GUI'));
 addpath(fullfile(EASE_dir, 'GUI', 'callbacks'));
