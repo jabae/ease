@@ -11,7 +11,7 @@ try
     temp(emd_id) = -inf;
     neuron.match_status.confidence(cell_id) = v_max / max(temp);
 catch 
-    fprintf('confidence value has not been updated yet.'); 
+    fprintf('confidence value has not been updated yet.\n'); 
 end
 
 ease_show_2p_neuron; 

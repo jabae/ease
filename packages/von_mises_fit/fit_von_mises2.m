@@ -17,6 +17,12 @@ s = x' * exp(2i*phi);
 theta = angle(s)/2;
 xm = mean(x);
 x = x-xm;
+if x'*x ==0 
+    pars = [xm, 0, 0, 0, pi];
+    xfit = xm + x;    
+    rss = 1; 
+    return; 
+end 
 c = cos(phi-theta);
 
 % binary search for optimal width

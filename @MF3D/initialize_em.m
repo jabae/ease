@@ -43,7 +43,7 @@ if ~exist('options', 'var') || isempty(options)
     show_fig = true;        % show figures for visualizing the initializaito step
     K_candidate = 3000;     % number of neurons to be considered
     K_new = 50;             % number of neurons to be added
-    min_pnr = 5;                % the minimum peak-to-noise ratio for a good trace
+    min_pnr = 3;                % the minimum peak-to-noise ratio for a good trace
 else
     init_method = options.init_method;
     order_statistics = options.order_statistics;
@@ -53,14 +53,18 @@ else
     show_fig = options.show_fig;
     K_candidate = options.K_candidate;
     K_new = options.K_new;
-    try 
-    min_pnr = options.min_pnr;
-    catch 
-        min_pnr = 3; 
+    try
+        min_pnr = options.min_pnr;
+    catch
+        min_pnr = 3;
     end
 end
 
 % order neurons and determine the list of candidate neurons
+spatial_range = obj.spatial_range;
+if ~isempty(spatial_range)
+    Aem(~spatial_range(:), :) = 0;
+end
 ind_voxels_em = sparse(sum(Aem, 2)>0); % find voxels within EM volumes
 Aem_sum = sum(Aem, 1);          % l1 norm of each ai_em
 if ~clear_results
@@ -124,7 +128,6 @@ elseif ~isempty(obj.b)
 end
 
 %% get the spatial range
-spatial_range = obj.spatial_range;
 if ~isempty(spatial_range)
     Y(~spatial_range, :) = 0; % remove pixels outside of the EM volume
 end

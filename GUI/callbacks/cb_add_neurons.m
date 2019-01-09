@@ -9,5 +9,4 @@ fprintf('EASE is trying to add %d neurons from the top %d EM components\n...\n',
 neuron.initialize_em(Aem, [], ease.options_init);
 fprintf('Done\n\n'); 
 
-neuron.scores = neuron.calculate_matching_scores(Aem, 'sim');
-neuron.A_corr = neuron.calculate_corr(Y_cnmf);
+neuron.evaluate_matching_confidence(Aem); 

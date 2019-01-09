@@ -154,6 +154,7 @@ classdef MF3D < handle
                 obj.match_status.status(ind) = [];
                 obj.match_status.em_ids(ind) = [];
                 obj.match_status.confidence(ind) = [];
+                obj.match_status.scores(ind) = []; 
             end
             
             % save the log
@@ -280,7 +281,7 @@ classdef MF3D < handle
         
         
         %% calculate the matching score between all neuron shapes and EM components
-        function scores = calculate_matching_scores(obj, Aem, method)
+        function scores = calculate_matching_scores(obj, Aem)
             % check the spatial mask
             if iscell(Aem)
                 Aem = obj.convert_matrix(Aem);
@@ -368,6 +369,7 @@ classdef MF3D < handle
             %% compute matching confidence 
             K = size(A_, 2); 
             confidence = zeros(1, K);
+            best_scores = zeros(1, K); 
             for m=1:K 
                 em_id = obj.match_status.em_ids{m};
                 temp = obj.scores(m, :); 
@@ -375,8 +377,10 @@ classdef MF3D < handle
                 temp(em_id) = -inf; 
                 v_others = max(temp); 
                 confidence(m) = v_select / v_others; 
+                best_scores(m)= v_select; 
             end 
-            obj.match_status.confidence = confidence; 
+            obj.match_status.confidence = confidence;
+            obj.match_status.scores = best_scores; 
           end
         
         %% initialization given EM masks
@@ -472,6 +476,9 @@ classdef MF3D < handle
                     srt = optimalleaforder(tree, dd);
                 elseif strcmpi(srt, 'confidence')
                     [~, srt] = sort(obj.match_status.confidence, 'descend');
+                    
+                elseif strcmpi(srt, 'match_scores')
+                    [~, srt] = sort(obj.match_status.scores, 'descend');
                 else %if strcmpi(srt, 'snr')
                     snrs = var(obj.C, 0, 2)./var(obj.C_raw-obj.C, 0, 2);
                     [~, srt] = sort(snrs, 'descend');
@@ -493,6 +500,9 @@ classdef MF3D < handle
                 end
                 if ~isempty(obj.match_status.confidence)
                     obj.match_status.confidence = obj.match_status.confidence(srt);
+                end
+                if ~isempty(obj.match_status.confidence)
+                    obj.match_status.scores = obj.match_status.scores(srt);
                 end
                 obj.A_corr = obj.A_corr(:, srt);
                 
@@ -972,17 +982,14 @@ classdef MF3D < handle
         
         %% compute tuning curves for all neurons 
         function compute_tuning_curve(obj, stimuli)%, sig)
-%             if ~exist('sig', 'var') || isempty(sig)
-%                 sig = pi/10; 
-%             end
             bins_nan = isnan(stimuli);
             ori = stimuli(~bins_nan);
             
             x = reshape(unique(ori), [], 1);
-%             temp = bsxfun(@minus, x, reshape(ori, 1, []));
-%             temp = mod(temp+pi, 2*pi) - pi; % x axis is a circle
-%             y = exp(-(temp).^2 / (2*sig^2)) * obj.S(:, ~bins_nan)';
+            n = hist(ori, x); 
             y = bsxfun(@eq, x, reshape(ori, 1, [])) * obj.S(:, ~bins_nan)'; 
+            y = bsxfun(@times, y, reshape(1./n, [], 1)); 
+            y(:, sum(y)==0) = 1; 
             y = bsxfun(@times, y, 1./sum(y, 1));
             
             obj.tuning_curve = struct('x', x, 'y', y); 

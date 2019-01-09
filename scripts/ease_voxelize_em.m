@@ -18,7 +18,7 @@ options.dims_2p = ease.dims_stack;
 options.range_2p = ease.range_2p;
 options.A = A_convert;
 options.offset = offset;
-options.user_parallel = false; 
+options.user_parallel = true; 
 if strcmpi(data_name, 'pinky40')  % convert the EM unit to um
     options.scale_factor = 0.001*3.58/4;      
 else
@@ -26,8 +26,7 @@ else
 end
 
 %% voxelize all EM meshes 
-parpopulate(rel_voxels); 
-
+parpopulate(rel_voxels);
 %% collect EM information 
 [segment_id, indices] = fetchn(rel_voxels, 'segment_id', 'indices');
 EM_info = [segment_id, cellfun(@length, indices)];

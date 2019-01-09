@@ -27,7 +27,11 @@ res_factor = 3;     % use a higher resolution before downsampling
 A = options.A; 
 offset = options.offset; 
 scale_factor = options.scale_factor; 
-
+if isfield(options, 'use_parallel')
+    use_parallel = options.use_parallel;
+else
+    use_parallel = true; 
+end
 if isempty(faces)
     subs_2p = zeros(0, 3); 
     V = 0; 
@@ -37,24 +41,46 @@ end
 %% voxelize mesh surfaces
 if iscell(vertices)
     nz_voxels = cell(1, length(vertices));
-    parfor seg_id = 1:length(vertices)
-        % convert the coordinates from EM space to 2p space
-        tmp_vert = bsxfun(@plus, vertices{seg_id} * scale_factor * A, offset);
-        
-        % the starting point
-        vert_0 = min(tmp_vert);
-        vert_range = max(tmp_vert)-vert_0+1;
-        
-        % voxelize
-        FV = struct('vertices', bsxfun(@minus, tmp_vert, vert_0), ...
-            'faces', faces{seg_id} + 1);
-        tmp_V = polygon2voxel(FV, round(vert_range./voxel_em), 'auto', false);
-        
-        %% determine the xyz locations of nonzero voxels
-        ind = find(tmp_V);
-        [x, y, z] = ind2sub(size(tmp_V), ind);
-        temp = bsxfun(@times, [x, y, z]-1, voxel_em);
-        nz_voxels{seg_id} = bsxfun(@plus, temp', vert_0');
+    if use_parallel
+        parfor seg_id = 1:length(vertices)
+            % convert the coordinates from EM space to 2p space
+            tmp_vert = bsxfun(@plus, vertices{seg_id} * scale_factor * A, offset);
+            
+            % the starting point
+            vert_0 = min(tmp_vert);
+            vert_range = max(tmp_vert)-vert_0+1;
+            
+            % voxelize
+            FV = struct('vertices', bsxfun(@minus, tmp_vert, vert_0), ...
+                'faces', faces{seg_id} + 1);
+            tmp_V = polygon2voxel(FV, round(vert_range./voxel_em), 'auto', false);
+            
+            %% determine the xyz locations of nonzero voxels
+            ind = find(tmp_V);
+            [x, y, z] = ind2sub(size(tmp_V), ind);
+            temp = bsxfun(@times, [x, y, z]-1, voxel_em);
+            nz_voxels{seg_id} = bsxfun(@plus, temp', vert_0');
+        end
+    else
+        for seg_id = 1:length(vertices)
+            % convert the coordinates from EM space to 2p space
+            tmp_vert = bsxfun(@plus, vertices{seg_id} * scale_factor * A, offset);
+            
+            % the starting point
+            vert_0 = min(tmp_vert);
+            vert_range = max(tmp_vert)-vert_0+1;
+            
+            % voxelize
+            FV = struct('vertices', bsxfun(@minus, tmp_vert, vert_0), ...
+                'faces', faces{seg_id} + 1);
+            tmp_V = polygon2voxel(FV, round(vert_range./voxel_em), 'auto', false);
+            
+            %% determine the xyz locations of nonzero voxels
+            ind = find(tmp_V);
+            [x, y, z] = ind2sub(size(tmp_V), ind);
+            temp = bsxfun(@times, [x, y, z]-1, voxel_em);
+            nz_voxels{seg_id} = bsxfun(@plus, temp', vert_0');
+        end
     end
     % xyz positions of all nonzero voxels
     subs = round(bsxfun(@times, cell2mat(nz_voxels), res_factor./voxels_2p')') + 1;
