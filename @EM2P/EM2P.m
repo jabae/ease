@@ -81,7 +81,7 @@ classdef EM2P < handle
         
         % EM data
         matfile_em = ''; % matfile for storing all EM data
-        
+        em_segmentation = 1; 
         em_data = [];
         em_variables = [];
         em_info = [];

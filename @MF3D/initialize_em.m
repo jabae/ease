@@ -148,7 +148,8 @@ if clear_results
     obj.ids = zeros(K_new, 1);
     obj.match_status.status = zeros(1, K_new);
     obj.match_status.em_ids = cell(1, K_new);
-    obj.match_status.confidence = ones(1, K_new)*5;
+    obj.match_status.confidence = zeros(1, K_new);
+    obj.match_status.scores = zeros(1, K_new);
 else
     K_pre = size(obj.A, 2);     % number of existing neurons
     obj.A = [obj.A, zeros(d, K_new)];
@@ -159,7 +160,8 @@ else
     obj.ids((end+1):(end+K_new)) = 0;
     obj.labels((end+1):(end+K_new)) = 0;
     obj.match_status.status((end+1):(end+K_new)) = 0;
-    obj.match_status.confidence((end+1):(end+K_new)) = 5;
+    obj.match_status.confidence((end+1):(end+K_new)) = 0;
+    obj.match_status.scores((end+1):(end+K_new)) = 0;
     obj.match_status.em_ids = [obj.match_status.em_ids, cell(1, K_new)];
 end
 k_new = K_pre;
@@ -332,7 +334,8 @@ while (k_new < K_new+K_pre) && (k_tried<size(A_,2))
     obj.A_mask(:, k_new) = ai(:)*A_norm(ind_max);
     obj.ids(k_new) = em_ids(ind_max);
     obj.match_status.status(k_new) = 1;
-    obj.match_status.confidence(k_new) = 5;
+    obj.match_status.confidence(k_new) = 0;
+    obj.match_status.scores(k_new) = 0;
     obj.match_status.em_ids{k_new} = em_ids(ind_max);
     ind_used(ind_max) = true;
     fprintf('\t %d\n', k_new);

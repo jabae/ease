@@ -31,7 +31,7 @@ classdef MF3D < handle
         %quality control
         ids;        % unique identifier for each neuron
         match_status = struct('status', [], 'em_ids', [], 'confidence', ...
-            []);  % the status of neuron matching. It's a struct variable with two fields:
+            [], 'scores', []);  % the status of neuron matching. It's a struct variable with two fields:
         %  status: an array indicating the status for each neuron
         % -1: no match because the neuron is outsize of EM volume
         % 0: all EM segments are potential matches
@@ -312,6 +312,11 @@ classdef MF3D < handle
             temp(isnan(temp)) = 0;
             scores = sparse(temp);
             obj.scores = scores; 
+%             
+%             K = size(obj.A, 2); 
+%             Kem = size(scores, 2); 
+%             ind = sub2ind([K, Kem], 1:K, cell2mat(obj.match_status.s
+%             obj.match_status.scores = scores(
         end
         
         %% evaluate matching performance
@@ -675,8 +680,10 @@ classdef MF3D < handle
             results.C_raw = obj.C_raw(ind, :);
             results.C = obj.C(ind, :);
             results.S = obj.S(ind, :);
+            results.labels = obj.labels(ind, :); 
             tmp_ids = cell2mat(obj.match_status.em_ids(ind));
             results.EM_IDs = em_ids(tmp_ids, 1);
+            results.match_score = obj.match_status.scores; 
             results.confidence = obj.match_status.confidence;
             results.deconv_options = obj.options.deconv_options;
             if exist('output_path', 'var')

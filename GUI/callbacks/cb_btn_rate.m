@@ -7,6 +7,6 @@ temp = neuron.match_status.confidence(cell_id);
 if temp==0
     set(ease.gui.text_rate, 'string', '0', 'foregroundcolor', 'red');
 else
-    set(ease.gui.text_rate, 'string', num2str(round(neuron.match_status.confidence(cell_id))), ...
+    set(ease.gui.text_rate, 'string', num2str((neuron.match_status.confidence(cell_id))), ...
         'foregroundcolor', 'blue');
 end

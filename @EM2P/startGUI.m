@@ -1,13 +1,13 @@
 function startGUI(obj)
-%% create a GUI for easy visualizing data 
+%% create a GUI for easy visualizing data
 
 %% GUI positions
 % frequently used widths and heights
 w1_ = 100;
 w2_ = 25;
 w4_ = 55;
-w5_ = 80; 
-scale = 100/obj.d1; 
+w5_ = 80;
+scale = 100/obj.d1;
 w3_ = obj.d2*scale;
 dw1_ = 3;
 % dw2_ = 1;
@@ -25,8 +25,8 @@ font_size = 11;
 % data loading
 pos_btn_load_video = [w0, h0, w1_, h1_];
 
-% summary images 
-pos_btn_summary_image = [w0, h0-(h1_+dh1_), w1_, h1_]; 
+% summary images
+pos_btn_summary_image = [w0, h0-(h1_+dh1_), w1_, h1_];
 
 pos_btn_load_em = [w0, h0-2*(h1_+dh1_), w1_, h1_];
 
@@ -73,19 +73,19 @@ pos_btn_match_em = pos_btn_init_seed + [w1_+dw1_, 0, 0, 0];
 
 % seed method
 pos_btn_auto_init = pos_btn_load_em + [0, -h1_-dh1_, 0,0];
-pos_btn_init_options = pos_btn_auto_init + [w1_+dw1_, 0, 0, 0]; 
+pos_btn_init_options = pos_btn_auto_init + [w1_+dw1_, 0, 0, 0];
 pos_btn_cnmf = pos_btn_init_options + [w1_+dw1_, 0, 0,0];
 pos_btn_save_neuron = pos_btn_cnmf + [w1_+dw1_, 0, 0,0];
 % pos_btn_load_init = pos_btn_save_neuron + [w1_+dw1_, 0, 0,0];
 
-pos_btn_visualize_neurons = pos_btn_load_em + [0, -2*(h1_+dh1_), 0, 0]; 
-pos_btn_ca_ahead = pos_btn_visualize_neurons + [w1_+dw1_, 0, w2_-w1_, 0]; 
+pos_btn_visualize_neurons = pos_btn_load_em + [0, -2*(h1_+dh1_), 0, 0];
+pos_btn_ca_ahead = pos_btn_visualize_neurons + [w1_+dw1_, 0, w2_-w1_, 0];
 pos_text_cell_id = pos_btn_ca_ahead + [w2_+dw1_, 0, w2_, 0];
 pos_btn_ca_next = pos_text_cell_id + [2*w2_+dw1_, 0, -w2_, 0];
-pos_btn_confidence = pos_btn_ca_next + [w2_+dw1_, 0, 3*w2_, 0]; 
+pos_btn_confidence = pos_btn_ca_next + [w2_+dw1_, 0, 3*w2_, 0];
 pos_text_rate = [pos_btn_confidence(1)+ 4*w2_+dw1_, pos_btn_confidence(2), 2*w2_, h1_];
 pos_btn_rate_0 = pos_text_rate + [w2_*2+3*dw1_, 0, -w2_, 0];
-pos_btn_delete = pos_btn_rate_0 + [w2_, 0, w5_-w2_, 0]; 
+pos_btn_delete = pos_btn_rate_0 + [w2_, 0, w5_-w2_, 0];
 
 %pos_btn_rate_5 = [pos_btn_confidence(1)+ 4*w2_, pos_btn_confidence(2), w2_, h1_];
 % pos_btn_rate_4 = pos_btn_rate_5 + [w2_, 0, 0, 0];
@@ -93,10 +93,10 @@ pos_btn_delete = pos_btn_rate_0 + [w2_, 0, w5_-w2_, 0];
 % pos_btn_rate_2 = pos_btn_rate_3 + [w2_, 0, 0, 0];
 % pos_btn_rate_1 = pos_btn_rate_2 + [w2_, 0, 0, 0];
 % pos_btn_rate_0 = pos_btn_rate_1 + [w2_, 0, 0, 0];
-% pos_btn_delete = pos_btn_rate_0 + [w2_, 0, w5_-w2_, 0]; 
-% pos_btn_delete = pos_text_rate + [w2_*3, 0, w5_-w2_, 0]; 
-pos_btn_soma = pos_btn_delete + [w5_+dw1_, 0, 0, 0]; 
-pos_btn_dendrite = pos_btn_soma + [w5_, 0, 0, 0]; 
+% pos_btn_delete = pos_btn_rate_0 + [w2_, 0, w5_-w2_, 0];
+% pos_btn_delete = pos_text_rate + [w2_*3, 0, w5_-w2_, 0];
+pos_btn_soma = pos_btn_delete + [w5_+dw1_, 0, 0, 0];
+pos_btn_dendrite = pos_btn_soma + [w5_, 0, 0, 0];
 
 % axes for showing spatial components
 pos_ax_slice = cell(obj.num_slices,1);
@@ -148,7 +148,7 @@ pos_fig = [x0_fig, y0_fig, w_fig, h_fig];
 % pos_btn_align_em_dn = pos_ax_align_em + [w3_+dw1_, 0, w4_-w3_, floor(h3_/3)-h3_];
 % pos_text_align_em = pos_ax_align_em + [w3_+dw1_, h3_/3, w4_-w3_, floor(h3_/3)-h3_];
 % pos_btn_align_em_up = pos_ax_align_em + [w3_+dw1_, h3_*2/3, w4_-w3_, floor(h3_/3)-h3_];
-% 
+%
 % pos_ax_align_2p = pos_ax_align_em + [0, h3_+h1_, 0, 0];
 % pos_btn_align_2p_dn = pos_ax_align_2p + [w3_+dw1_, 0, w4_-w3_, floor(h3_/3)-h3_];
 % pos_text_align_2p = pos_ax_align_2p + [w3_+dw1_, h3_/3, w4_-w3_, floor(h3_/3)-h3_];
@@ -157,10 +157,10 @@ pos_fig = [x0_fig, y0_fig, w_fig, h_fig];
 
 
 %% GUI layouts
-try % close old GUI 
-    close(get(obj.gui.text_scan, 'parent')); 
-end 
-handles.fig_main = figure('position', pos_fig);
+try % close old GUI
+    close(get(obj.gui.text_scan, 'parent'));
+end
+handles.fig_main = figure('position', pos_fig, 'KeyPressFcn', @keyPress);
 handles.color_gray = ones(1,3)*0.94;
 handles.color_cyan = [0, 1, 1];
 handles.color_pink = [255, 153, 255]/255;
@@ -220,9 +220,9 @@ for m=1:obj.num_slices
     ax_em{m} = axes('parent',handles.fig_main, 'units', 'pixels', 'box', 'on', ...
         'position', pos_ax_em{m}, 'ytick', [], 'xtick', []);
 end
-handles.ax_slice = ax_slice; 
-handles.ax_corr = ax_corr; 
-handles.ax_em = ax_em; 
+handles.ax_slice = ax_slice;
+handles.ax_corr = ax_corr;
+handles.ax_em = ax_em;
 
 %% load button
 handles.btn_load_ca = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
@@ -304,7 +304,7 @@ handles.btn_save_neuron = uicontrol(handles.fig_main, 'style', 'pushbutton', 'un
 %     'position', pos_btn_load_init, 'string', 'load init.', 'backgroundcolor', handles.color_gray,...
 %     'fontsize', font_size, 'fontweight', 'bold', 'callback', 'ease_import_results;');
 
-%% visulize neurons 
+%% visulize neurons
 handles.btn_visualize_neuron = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
     'position', pos_btn_visualize_neurons, 'string', 'check cell',...
     'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_cyan, ...
@@ -408,5 +408,21 @@ handles.ax_score = axes('parent',handles.fig_main, 'units', 'pixels',...
     'position', pos_ax_score, 'title', 'match score');
 title(handles.ax_score, 'match score');
 
-obj.gui = handles; 
+obj.gui = handles;
+end
+
+function keyPress(~, e)
+switch lower(e.Key)
+    case 's' % label as soma
+        evalin('base', 'neuron.labels(cell_id) = 1; cb_btn_label;');
+    case 'd' % label as dendrite
+        evalin('base', 'neuron.labels(cell_id) = 2; cb_btn_label;');
+    case 'n' % check enxt cell
+        evalin('base', 'cell_id = cell_id+1; ease_show_2p_neuron;');
+    case 'b' % check enxt cell
+        evalin('base', 'cell_id = max(1, cell_id-1); ease_show_2p_neuron;');
+    case '0'
+        evalin('base', 'neuron.match_status.confidence(cell_id)=0; cb_btn_rate;');
+end
+
 end

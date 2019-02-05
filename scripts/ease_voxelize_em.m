@@ -28,7 +28,9 @@ end
 %% voxelize all EM meshes 
 parpopulate(rel_voxels);
 %% collect EM information 
-[segment_id, indices] = fetchn(rel_voxels, 'segment_id', 'indices');
+[segment_id, indices] = fetchn(rel_voxels & ...
+    sprintf('segmentation=%d', ease.em_segmentation), ...
+    'segment_id', 'indices');
 EM_info = [segment_id, cellfun(@length, indices)];
 
 % determine EM ranges 
