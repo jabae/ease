@@ -181,20 +181,7 @@ classdef EM2P < handle
         update_init_options(obj); 
         
         %% get EM boundaries
-        function get_em_boundaries(obj)
-            for mscan=1:obj.num_scans
-                zs = obj.video_zvals_updated(mscan, :);
-                temp = obj.em_data.em_ranges; 
-                em_volume = cell2mat(temp(zs));
-                if ~isempty(em_volume)
-                    k = convhull(em_volume(:, 2), em_volume(:, 1));
-                    obj.em_boundary{mscan} = em_volume(k, :);
-                else
-                    obj.em_boundary{mscan} = []; 
-                end
-            end
-        end
-        
+        get_em_boundaries(obj);  
     
     end
     
