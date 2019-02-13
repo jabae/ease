@@ -1,10 +1,8 @@
-% setup path and connect to a database 
-addpath(fullfile(EASE_dir, 'packages'));
-addpath(genpath(fullfile(EASE_dir, 'packages', 'polygon2voxel')));
-
+%% connect to a database 
 if ~exist('dj_connected', 'var') || ~dj_connected
     ease_connect_database;
 end
+
 %% get the transformation matrix between EM space and 2P space 
 if ~exist(fullfile(ease.data_folder, ease.matfile_transformation), 'file')
     ease_get_transformation; 
@@ -12,7 +10,7 @@ else
     load(fullfile(ease.data_folder, ease.matfile_transformation)); 
 end
 
-% create a struct variable storing parameters
+%% create a struct variable storing parameters
 options.voxel_em = [256, 256, 240]/1000; % voxelize EM data with this resolution 
 options.dims_2p = ease.dims_stack;
 options.range_2p = ease.range_2p;
@@ -27,6 +25,7 @@ end
 
 %% voxelize all EM meshes 
 parpopulate(rel_voxels);
+
 %% collect EM information 
 [segment_id, indices] = fetchn(rel_voxels & ...
     sprintf('segmentation=%d', ease.em_segmentation), ...

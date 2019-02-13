@@ -10,16 +10,16 @@ classdef EM2P < handle
         % YAML file for storing the configurations
         yaml_path = '';
         
-        % data folder 
-        data_folder = ''; %folder for storing intermediate results 
+        % data folder
+        data_folder = ''; %folder for storing intermediate results
         % output folder
         output_folder = '';
         
-        % fig folder 
-        fig_folder = ''; % folder for saving figures 
+        % fig folder
+        fig_folder = ''; % folder for saving figures
         
-        % video_folder 
-        video_folder = ''; %folder for savign videos 
+        % video_folder
+        video_folder = ''; %folder for savign videos
         
         % video imaging data
         matfile_video = ''; % file path
@@ -35,12 +35,12 @@ classdef EM2P < handle
         use_denoise = false; % use the denoised data for running CNMF
         
         % mat file for storing all 2p stack data
-        matfile_stack = '/data/lab/Dropbox/Tolias_PC/em_2p_pipeline/data/functional_data/stack_2p.mat';
+        matfile_stack = '';
         stack_shifts = {};
         
         % coordinate conversion between EM and 2p stack data
-        registration_csv = ''; 
-        matfile_transformation = '/data/lab/Dropbox/Tolias_PC/em_2p_pipeline/coor_convert.mat';
+        registration_csv = '';
+        matfile_transformation = '';
         
         % FOV information
         d1 = [];
@@ -51,7 +51,7 @@ classdef EM2P < handle
         FOV_stack = [];
         aligned_images = [];      % overlap of stack images and mean of video images to show the performances of alignment
         align_max_zshift = 8;     %
-        ssub = 2;       % downsampling factor between stack data and video data 
+        ssub = 2;       % downsampling factor between stack data and video data
         
         % data information
         num_scans = 8;          % number of total scans
@@ -66,22 +66,17 @@ classdef EM2P < handle
         slice_id = 1;
         block_id = 1;
         
-        % initialization 
-        options_init = struct();    % options for initialization 
-        init_method = 'regression';     % the default initialization method
-        show_init = true;   % interactively running the initialization procedure
-        pause_init = false; % show the intermediate results during the initialization
-        maxIter_init = 1;  % nubmer of iterations in the initialization step
-        
+        % initialization
+        options_init = struct();    % options for initialization
+
         show_em_only = false; % show EM component when you display the merge of the EM mask and CNMF mask
-        
         
         match_mask = true;    % use the spatial mask (true) or the spatial footprint (false) in
         % the step of computing the matching score between EM & CNMF component
         
         % EM data
         matfile_em = ''; % matfile for storing all EM data
-        em_segmentation = 1; 
+        em_segmentation = 1;
         em_data = [];
         em_variables = [];
         em_info = [];
@@ -96,8 +91,8 @@ classdef EM2P < handle
         % method for computing the matching scores
         score_method = 'corr' ;
         
-        % create new MF3D class object for each scan 
-        create_new = false; 
+        % create new MF3D class object for each scan
+        create_new = false;
         
         % GUI
         gui = [];
@@ -108,16 +103,11 @@ classdef EM2P < handle
     methods
         %% constructor and options setting
         function obj = EM2P(path_yaml_file)
-            try
-                EASE_folder = fileparts(which('ease_setup.m'));
+            if exist('path_yaml_file', 'var') && exist(path_yaml_file, 'file')
                 obj.read_config(path_yaml_file);
-            catch
+            else
+                EASE_folder = fileparts(which('ease_setup.m'));
                 obj.yaml_path = fullfile(EASE_folder, 'config_ease.yaml');
-                obj.output_folder = '/data/lab/Dropbox/softwares/EASE/results';
-                obj.matfile_video = '/data/paninski_lab/Tolias_lab/functional_data_analysis/functional_data.mat';
-                obj.matfile_em = '/data/paninski_lab/Tolias_lab/EM/em.mat';
-                obj.denoised_folder = '/data/paninski_lab/Tolias_lab/cropped_denoised/';
-                obj.raw_folder = '/data/paninski_lab/Tolias_lab/cropped/';
             end
         end
         
@@ -161,7 +151,7 @@ classdef EM2P < handle
         %% create masks for EM volumes
         get_em_masks(obj);
         
-        %% save the current object 
+        %% save the current object
         function save(obj)
             tmp_file = fullfile(obj.output_folder, 'ease.mat');
             save(tmp_file, 'obj');
@@ -172,15 +162,15 @@ classdef EM2P < handle
         
         %% GUI
         startGUI(obj);
-  
-        %% load the projection of Aem onto the 2p stack 
-        Aem_proj = project_em_to_stack(obj); 
-
-        %% update initialization options 
-        update_init_options(obj); 
+        
+        %% load the projection of Aem onto the 2p stack
+        Aem_proj = project_em_to_stack(obj);
+        
+        %% update initialization options
+        update_init_options(obj);
         
         %% get EM boundaries
-        get_em_boundaries(obj);  
+        get_em_boundaries(obj);
     end
     
     
