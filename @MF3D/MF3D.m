@@ -31,7 +31,7 @@ classdef MF3D < handle
         %quality control
         ids;        % unique identifier for each neuron
         match_status = struct('status', [], 'em_ids', [], 'confidence', ...
-            []);  % the status of neuron matching. It's a struct variable with two fields:
+            [], 'scores', []);  % the status of neuron matching. It's a struct variable with two fields:
         %  status: an array indicating the status for each neuron
         % -1: no match because the neuron is outsize of EM volume
         % 0: all EM segments are potential matches
@@ -312,76 +312,81 @@ classdef MF3D < handle
             temp(isnan(temp)) = 0;
             scores = sparse(temp);
             obj.scores = scores; 
+%             
+%             K = size(obj.A, 2); 
+%             Kem = size(scores, 2); 
+%             ind = sub2ind([K, Kem], 1:K, cell2mat(obj.match_status.s
+%             obj.match_status.scores = scores(
         end
         
         %% evaluate matching performance
-        function confidence = evaluate_matching_confidence(obj, Aem, Yr)
-            % check the spatial mask 
-            if iscell(Aem)
-                Aem = obj.convert_matrix(Aem);
-            end
-            em_mask = (sum(Aem, 2)<=0);   % constrain to the area within the EM volume
-            Aem(em_mask, :) = [];
-            n = size(Aem, 1);
-            Aem_sum = sum(Aem, 1);
-            Aem_std = sqrt(sum(Aem.^2,1) - (Aem_sum.^2/n));
-
-            %% compute correlation 
-            if ~exist('Yr', 'var') || isempty(Yr)
-                if isempty(obj.frame_range)
-                    Yr = evalin('base', 'Y_cnmf');
-                else
-                    temp = obj.frame_range;
-                    Yr = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
-                end
-            end
-            Yres = obj.reshape(Yr, 1) - obj.A*obj.C - obj.b*obj.f;
-            Yres = bsxfun(@minus, Yres, mean(Yres, 2));
-            var_Yres = sum(Yres.^2, 2);
-            tmpA_corr = zeros(size(obj.A));
-            for m=1:size(obj.A, 2)
-                ci = obj.C(m, :);
-                ci = ci - mean(ci); 
-                ai = obj.A(:, m);
-                tmpA_corr(:, m) = (Yres*ci' + ai*(ci*ci')) ...
-                    ./sqrt(var_Yres+(ai.^2)*(ci*ci'))/sqrt(ci*ci'); % approximate the variance
-            end
-            obj.A_corr = tmpA_corr; 
-          
-            %% compute matching score
-            A_ = obj.A;
-            A_(em_mask, :) = [];
-            A_(A_<=0) = 0;
-            P_ = obj.A; %obj.A_mask .* tmpA_corr;
-            P_(em_mask, :) = [];
-            P_sum = sum(P_, 1);
-            P_std = sqrt(sum(P_.^2, 1) - (P_sum.^2/n));
-            
-            temp1 = bsxfun(@times, A_'*(Aem>0), 1./sum(A_,1)'); % explained signal with different masks
-            temp2 = P_'*Aem - P_sum'*(Aem_sum/n);  % a faster way of computing correlation coefficients
-            temp2 = bsxfun(@times, temp2, 1./P_std'); 
-            temp2 = bsxfun(@times, temp2, 1./Aem_std); 
-          
-            temp = temp1 .* temp2; 
-            temp(isnan(temp)) = 0;
-            obj.scores = sparse(temp); 
-            
-            %% compute matching confidence 
-            K = size(A_, 2); 
-            confidence = zeros(1, K);
-            best_scores = zeros(1, K); 
-            for m=1:K 
-                em_id = obj.match_status.em_ids{m};
-                temp = obj.scores(m, :); 
-                v_select = temp(em_id);
-                temp(em_id) = -inf; 
-                v_others = max(temp); 
-                confidence(m) = v_select / v_others; 
-                best_scores(m)= v_select; 
-            end 
-            obj.match_status.confidence = confidence;
-            obj.match_status.scores = best_scores; 
-          end
+        confidence = evaluate_matching_confidence(obj, Aem, Yr); 
+%             % check the spatial mask 
+%             if iscell(Aem)
+%                 Aem = obj.convert_matrix(Aem);
+%             end
+%             em_mask = (sum(Aem, 2)<=0);   % constrain to the area within the EM volume
+%             Aem(em_mask, :) = [];
+%             n = size(Aem, 1);
+%             Aem_sum = sum(Aem, 1);
+%             Aem_std = sqrt(sum(Aem.^2,1) - (Aem_sum.^2/n));
+% 
+%             %% compute correlation 
+%             if ~exist('Yr', 'var') || isempty(Yr)
+%                 if isempty(obj.frame_range)
+%                     Yr = evalin('base', 'Y_cnmf');
+%                 else
+%                     temp = obj.frame_range;
+%                     Yr = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
+%                 end
+%             end
+%             Yres = obj.reshape(Yr, 1) - obj.A*obj.C - obj.b*obj.f;
+%             Yres = bsxfun(@minus, Yres, mean(Yres, 2));
+%             var_Yres = sum(Yres.^2, 2);
+%             tmpA_corr = zeros(size(obj.A));
+%             for m=1:size(obj.A, 2)
+%                 ci = obj.C(m, :);
+%                 ci = ci - mean(ci); 
+%                 ai = obj.A(:, m);
+%                 tmpA_corr(:, m) = (Yres*ci' + ai*(ci*ci')) ...
+%                     ./sqrt(var_Yres+(ai.^2)*(ci*ci'))/sqrt(ci*ci'); % approximate the variance
+%             end
+%             obj.A_corr = tmpA_corr; 
+%           
+%             %% compute matching score
+%             A_ = obj.A;
+%             A_(em_mask, :) = [];
+%             A_(A_<=0) = 0;
+%             P_ = obj.A; %obj.A_mask .* tmpA_corr;
+%             P_(em_mask, :) = [];
+%             P_sum = sum(P_, 1);
+%             P_std = sqrt(sum(P_.^2, 1) - (P_sum.^2/n));
+%             
+%             temp1 = bsxfun(@times, A_'*(Aem>0), 1./sum(A_,1)'); % explained signal with different masks
+%             temp2 = P_'*Aem - P_sum'*(Aem_sum/n);  % a faster way of computing correlation coefficients
+%             temp2 = bsxfun(@times, temp2, 1./P_std'); 
+%             temp2 = bsxfun(@times, temp2, 1./Aem_std); 
+%           
+%             temp = temp1 .* temp2; 
+%             temp(isnan(temp)) = 0;
+%             obj.scores = sparse(temp); 
+%             
+%             %% compute matching confidence 
+%             K = size(A_, 2); 
+%             confidence = zeros(1, K);
+%             best_scores = zeros(1, K); 
+%             for m=1:K 
+%                 em_id = obj.match_status.em_ids{m};
+%                 temp = obj.scores(m, :); 
+%                 v_select = temp(em_id);
+%                 temp(em_id) = -inf; 
+%                 v_others = max(temp); 
+%                 confidence(m) = v_select / v_others; 
+%                 best_scores(m)= v_select; 
+%             end 
+%             obj.match_status.confidence = confidence;
+%             obj.match_status.scores = best_scores; 
+%           end
         
         %% initialization given EM masks
         ind_voxels_em = initialize_em(obj, Aem, Y, options, black_list, white_list);
@@ -675,8 +680,10 @@ classdef MF3D < handle
             results.C_raw = obj.C_raw(ind, :);
             results.C = obj.C(ind, :);
             results.S = obj.S(ind, :);
+            results.labels = obj.labels(ind, :); 
             tmp_ids = cell2mat(obj.match_status.em_ids(ind));
             results.EM_IDs = em_ids(tmp_ids, 1);
+            results.match_score = obj.match_status.scores; 
             results.confidence = obj.match_status.confidence;
             results.deconv_options = obj.options.deconv_options;
             if exist('output_path', 'var')

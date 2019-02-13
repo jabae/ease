@@ -30,9 +30,11 @@ else
 end
 
 %% load all nonzero voxels 
+ssub =  ease.dims_stack(1) / ease.dims_video(1); 
 K_em = ease.K_em; 
 ease_connect_database; 
-indices = cell2mat(rel_voxels.fetchn('indices')); 
+temp = rel_voxels & sprintf('segmentation=%d', ease.em_segmentation); 
+indices = cell2mat(temp.fetchn('indices')); 
 n_voxels = ease.em_data.EM_info(:, 2); 
 ids = zeros(length(indices), 1); 
 temp = cumsum(n_voxels) + 1; 
@@ -71,6 +73,8 @@ for mscan = 1:ease.num_scans
         eval(sprintf('scan%d_slice%d = sparse(tmp_slice);', mscan, mslice));
         flag_processed(mscan, mslice) = true;
         if ssub > 1
+            d1 = d1_2p / ssub; 
+            d2 = d2_2p / ssub; 
             ind_cropped = sub2ind([d1_2p, d2_2p]/ssub, ceil(ii/ssub), ceil(jj/ssub));
             tmp_slice_ds = sparse(ind_cropped, ids, exp(-temp.^2 /norm_z), d1*d2, K_em);
             var_name_ds = sprintf('%s_ds%d', var_name, ssub);
