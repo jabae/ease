@@ -91,7 +91,6 @@ classdef EM2P < handle
         % pre-load EM data for faster speed. (default: true)
         em_load_flag = true;
         em_zblur = 6;          % the projection of each EM semgent onto one slice takes the nearby (-blur_size:blur_size) planes
-        PACK_SIZE = 64;     % pack size for compressing binary vectors.
         em_boundary = [];   % EM boundaries
         
         % method for computing the matching scores

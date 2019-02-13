@@ -5,8 +5,6 @@ end
 %% setup path
 addpath(genpath(fullfile(EASE_dir, 'packages', 'microns_phase1_nda')));
 addpath(genpath(fullfile(EASE_dir, 'packages', 'pipeline', 'matlab')));
-addpath(genpath(fullfile(EASE_dir, 'packages', 'ta3')));
-addpath(genpath(fullfile(EASE_dir, 'packages', 'ta3p100')));
 
 %% database user account
 
@@ -27,7 +25,7 @@ end
 fprintf('You are going to connect to a database\n\t%s.\n', dj_host); 
 
 % type user names
-fprintf('Now type your login information\n', dj_host);
+fprintf('Now type your login information\n');
 
 if ~exist('dj_username', 'var')
     dj_username = input('username: ', 's');
