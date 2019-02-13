@@ -181,7 +181,6 @@ classdef EM2P < handle
         
         %% get EM boundaries
         get_em_boundaries(obj);  
-    
     end
     
     

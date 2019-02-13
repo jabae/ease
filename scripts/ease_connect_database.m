@@ -2,9 +2,6 @@ if exist('dj_connected', 'var') && dj_connected
     fprintf('the database has been connected. \nif you want to reconnect, set dj_connected=false first.\n');
     return;
 end
-%% setup path
-addpath(genpath(fullfile(EASE_dir, 'packages', 'microns_phase1_nda')));
-addpath(genpath(fullfile(EASE_dir, 'packages', 'pipeline', 'matlab')));
 
 %% database user account
 

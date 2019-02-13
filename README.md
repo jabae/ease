@@ -34,7 +34,7 @@ git clone --recurse-submodules  https://github.com/zhoupc/ease.git
 ## Run EASE 
 We created a GUI for running EASE. Once we set up the data paths and configurations, just run 
 ```matlab 
->> ease.startGUI()
+>> run_ease; 
 ```
 Then you can start processing data with the GUI.  Easy-peasy! 
 
