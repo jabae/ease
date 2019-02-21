@@ -37,6 +37,7 @@ if mblock==0
 else
     var_name = sprintf('neuron_scan%d_block%d', mscan, mblock);
 end
+
 %% create a matfile for saving the results or load data from it directly
 FOV_ = obj.FOV;
 matfile_mf3d = fullfile(obj.output_folder, ...

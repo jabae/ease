@@ -9,16 +9,12 @@ if ~exist('new_figure', 'var')
 end
 
 %% get the transformation matrix between EM space and 2P space
-if ~exist(fullfile(ease.data_folder, ease.matfile_transformation), 'file')
-    ease_get_transformation;
-else
-    load(fullfile(ease.data_folder, ease.matfile_transformation));
-end
+[A_convert, offset] = ease.get_transformation(); 
+scale_factor = ease.em_scale_factor; 
 
 % create a struct variable storing parameters
 if strcmpi(data_name, 'pinky40')  % convert the EM unit to um
-    scale_factor = 0.001*3.58/4;
-    [vertices, faces] = fetchn(ta3.MeshFragment & 'segmentation>=0' &...
+    [vertices, faces] = fetchn(ta3.MeshFragment & 'segmentation=1' &...
         sprintf('segment_id=%d', em_id),...
         'vertices', 'triangles');
     for m=1:length(faces)
@@ -30,7 +26,6 @@ if strcmpi(data_name, 'pinky40')  % convert the EM unit to um
             'edgecolor', 'none', 'facecolor', [1, 0.7, 0]);       hold on;
     end
 else
-    scale_factor = 0.001;
     [vertices, faces] = fetch1(ta3p100.Mesh & ...
         sprintf('segmentation=%d', ease.em_segmentation) & ...
         sprintf('segment_id=%d', em_id), 'vertices', 'triangles');

@@ -1,10 +1,10 @@
 %% setup packages and some configurations
 close all; clear; clc;
 
-with_GUI = false;
+with_GUI = true;
 
 % folders related to the project
-dir_scripts = fileparts(which('start_EASE.m'));
+dir_scripts = fileparts(which('run_ease.m'));
 dir_project = fileparts(dir_scripts);
 dir_data = fullfile(dir_project, 'data');   % place for storing data
 dir_results = fullfile(dir_project, 'results'); % place for storing results

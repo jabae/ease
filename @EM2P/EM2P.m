@@ -29,7 +29,7 @@ classdef EM2P < handle
         video_zvals = [];  % z values for each slice
         video_zvals_updated = [];   % updated z values for different planes.
         video_Fs = 15;      % frame rate
-        video_T = 8781;     % number of frames.
+        video_T = 0;     % number of frames.
         denoised_folder = ''; % folder of the denoising results for the cropped area
         raw_folder = '';     % folder of the raw data of the cropped area
         use_denoise = false; % use the denoised data for running CNMF
@@ -41,6 +41,7 @@ classdef EM2P < handle
         % coordinate conversion between EM and 2p stack data
         registration_csv = '';
         matfile_transformation = '';
+        transformation = struct('A_convert', [], 'offset', []);
         
         % FOV information
         d1 = [];
@@ -68,7 +69,7 @@ classdef EM2P < handle
         
         % initialization
         options_init = struct();    % options for initialization
-
+        
         show_em_only = false; % show EM component when you display the merge of the EM mask and CNMF mask
         
         match_mask = true;    % use the spatial mask (true) or the spatial footprint (false) in
@@ -85,8 +86,9 @@ classdef EM2P < handle
         em_shifts = [];     % shifts for EM volumes
         % pre-load EM data for faster speed. (default: true)
         em_load_flag = true;
-        em_zblur = 6;          % the projection of each EM semgent onto one slice takes the nearby (-blur_size:blur_size) planes
+        em_zblur = 8;          % the projection of each EM semgent onto one slice takes the nearby (-blur_size:blur_size) planes
         em_boundary = [];   % EM boundaries
+        em_scale_factor = 0.001;  % a factor to map EM unit to um
         
         % method for computing the matching scores
         score_method = 'corr' ;
@@ -107,7 +109,7 @@ classdef EM2P < handle
                 obj.read_config(path_yaml_file);
             else
                 EASE_folder = fileparts(which('ease_setup.m'));
-                obj.yaml_path = fullfile(EASE_folder, 'config_ease.yaml');
+                obj.yaml_path = fullfile(EASE_folder, 'config_obj.yaml');
             end
         end
         
@@ -153,7 +155,7 @@ classdef EM2P < handle
         
         %% save the current object
         function save(obj)
-            tmp_file = fullfile(obj.output_folder, 'ease.mat');
+            tmp_file = fullfile(obj.output_folder, 'obj.mat');
             save(tmp_file, 'obj');
         end
         
@@ -171,6 +173,12 @@ classdef EM2P < handle
         
         %% get EM boundaries
         get_em_boundaries(obj);
+        
+        %% get transformation
+        [A_convert, offset] = get_transformation(obj);
+        
+        %% set options for voxelization
+        options = set_voxelization_options(obj, voxel_em);
     end
     
     

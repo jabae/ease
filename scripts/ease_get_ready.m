@@ -6,6 +6,7 @@ end
 
 %% load EM data 
 ease.load_em();         % EM data
+ease_select_em; 
 EM_info = ease.em_data.EM_info;
 
 %% load video data 
@@ -37,7 +38,7 @@ Y_denoised = cell(ease.num_scans, ease.num_blocks);
 ease.write_config(yaml_path);
 
 %% GUI
-if with_GUI
+if exist('with_GUI', 'var')  && with_GUI
     ease.startGUI();
 end
 
