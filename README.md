@@ -40,5 +40,19 @@ Then you can start processing data with the GUI.  Easy-peasy!
 
 We also provided many scripts for processing data automatically. More details of running EASE will be added soon. 
 
+## Package structure
+* **@EM2P**: define a class object for organzing data, options and high level functions. 
+* **@MF3D**: define a class object (matrix factorization 3D) for running matrix factorization on 3D data. 
+* **+erun**: (Ease run) a collection of scripts for processing data. 
+* **functions**: matlab functions used by the package. 
+* **GUI**:  GUI callbacks and layouts. 
+* **scripts**: a collection of scripts. (I'm going to slowly move all scripts into the folder +erun). 
+* **config_ease.yaml**: an example yaml file for storing configurations 
+* **ease_setup.m**: setup ease. 
+* **run_ease.m**: a demo script 
+
+## Copyright 
+[Pengcheng Zhou](https://zhoupc.github.io) @Columbia University, 2019
+
 
 

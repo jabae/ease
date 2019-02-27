@@ -11,11 +11,11 @@ EASE_dir = fi.locate('ease', quiet);
 addpath(EASE_dir);
 addpath(fullfile(EASE_dir, 'scripts'));
 addpath(fullfile(EASE_dir, 'packages'));
+addpath(fullfile(EASE_dir, 'functions'));
 
 addpath(genpath(fullfile(EASE_dir, 'packages', 'microns_phase1_nda')));
 addpath(genpath(fullfile(EASE_dir, 'packages', 'pipeline', 'matlab')));
 
 addpath(fullfile(EASE_dir, 'GUI'));
 addpath(fullfile(EASE_dir, 'GUI', 'callbacks'));
-addpath(fullfile(EASE_dir, 'functions'));
 

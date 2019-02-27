@@ -26,7 +26,7 @@ font_size = 11;
 pos_btn_load_video = [w0, h0, w1_, h1_];
 
 % summary images
-pos_btn_summary_image = [w0, h0-(h1_+dh1_), w1_, h1_];
+% pos_btn_summary_image = [w0, h0-(h1_+dh1_), w1_, h1_];
 
 pos_btn_load_em = [w0, h0-2*(h1_+dh1_), w1_, h1_];
 
