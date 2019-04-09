@@ -38,4 +38,15 @@ if isempty(obj.video_data)
 end
 fprintf('\nThe functional video data have been mapped to memory\n\n');
 
+%% get video frames 
+tmp_T = zeros(size(obj.video_loader)); 
+for m=1:numel(tmp_T)
+   tmp_T(m) = obj.video_loader{m}.num_frames;  
+end
+if std(tmp_T(:))==0
+   obj.video_T = tmp_T(1); 
+else
+    obj.video_T = tmp_T; 
+end
+   
 end

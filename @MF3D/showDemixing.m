@@ -32,18 +32,18 @@ function showDemixing(obj, Y, min_max, col_map, avi_nm, t_pause, ind_neuron, rot
 %}
 
 %% code
-if ~exist('Y', 'var') || isempty(Y)
-    if isempty(obj.frame_range)
-        Y = evalin('base', 'Y_cnmf');
-    else
-        temp = obj.frame_range;
-        Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
-    end
-end
-Y = double(obj.reshape(Y, 1));
-Y(~obj.spatial_range(:), :) = 0;  % remove pixels outside of EM volume
-d1 = obj.options.d1;
-d2 = obj.options.d2;
+%% preprocess data
+sort_frames = false;
+
+if obj.options.pre_process_data
+    Y = obj.preprocess(Y); 
+end 
+Yres = bsxfun(@minus, Y - obj.A*obj.C - obj.b*obj.f, obj.b0);
+sn = std(Yres, 0, 2); 
+
+%% create a figure handle to show video 
+% d1 = obj.options.d1;
+% d2 = obj.options.d2;
 d3 = obj.options.d3;
 nc = d3;
 nr = 6;
@@ -63,7 +63,6 @@ end
 rot_flag = true;
 img_width = diff(rot_xlim);
 img_height = diff(rot_ylim);
-
 
 % play movies
 width = round(img_width*nc*3/(0.99-(nc-1)*0.005)); 
@@ -97,14 +96,6 @@ if (nargin<3) || (isempty(min_max))
 end
 if ~exist('t_pause', 'var'); t_pause=0.01; end
 
-sort_frames = false;
-noise_method = 'std_res';
-if strcmpi(noise_method, 'std_res')
-    Yres = obj.compute_residual(Y);
-    sn = std(Yres, 0, 2);
-else
-    sn = GetSn(obj.reshape(Y, 1));
-end
 b_ = bsxfun(@times, obj.b, 1./sn);
 b0_ = obj.b0./sn;
 A_ = bsxfun(@times, obj.A, 1./sn);
@@ -235,9 +226,6 @@ for mframe=1:kt:T
         if z==1
             text(rot_xlim(1), rot_ylim(1)+3,'demixed', 'color', 'w', ...
                 'parent', ha(z, 6),'fontsize', 12, 'fontweight', 'bold');
-%                 sprintf('demixed ([%d, %d])',...
-%                 min_max(1), min_max(2)), 'color', 'w', 'parent', ha(z, 6),...
-%                 'fontsize', 12, 'fontweight', 'bold'); 
         end
         if z==3
             if isnan(obj.Fs)

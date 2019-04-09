@@ -1,4 +1,4 @@
-function flag = read_config(obj, path_file)
+function flag = read_config(obj, path_file, quiet)
 %% what does this function do
 %{
     read configurations for running EASE from a YAML file
@@ -8,6 +8,7 @@ function flag = read_config(obj, path_file)
 %{
     path_file: the path of the yaml file. if it's empty, they use the
     default yaml file obj.yaml_path
+    quiet: boolean; show info or not
 %}
 
 %% outputs:
@@ -29,6 +30,9 @@ if ~exist('path_file', 'var') || isempty(path_file) || ~exist(path_file, 'file')
     path_file = obj.yaml_path;
 end
 
+if ~exist('quiet', 'var') || isempty(quiet)
+    quiet = false;
+end
 % load yaml file
 configs = yaml.ReadYaml(path_file);
 
@@ -40,11 +44,13 @@ try
     end
     
     flag = true;
-    fprintf('\nThe configuration of the EASE environment has been updated from \n%s\n\n', ...
-        path_file); 
-    obj.yaml_path = path_file; 
+    if ~quiet
+        fprintf('\nThe configuration of the EASE environment has been updated from \n%s\n\n', ...
+            path_file);
+    end
+    obj.yaml_path = path_file;
     
-    % update few variables to correct the format 
+    % update few variables to correct the format
     nams = {'dims_stack', ...
         'dims_video', ...
         'range_2p', ...
@@ -58,9 +64,7 @@ try
         'em_shifts.ii', ...
         'em_shifts.jj', ...
         'stack_shifts.ii', ...
-        'stack_shifts.jj', ...
-        'transformation.A_convert', ...
-        'transformation.offset'};
+        'stack_shifts.jj'};
     for m=1:length(nams)
         try
             eval(sprintf('obj.%s=cell2mat(obj.%s); ', nams{m}, nams{m}));

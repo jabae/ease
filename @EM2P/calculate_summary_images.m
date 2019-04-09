@@ -1,7 +1,7 @@
 function summary_images = calculate_summary_images(obj, mscan, mblock)
 %% what does this function do
 %{
-    create a class object for storing the precessing results of the selected scan and block
+    create a struct variable for storing the precessing results of the selected scan and block
 %}
 
 %% inputs:
@@ -38,7 +38,7 @@ matfile_summary = fullfile(obj.output_folder, ...
     FOV_(1), FOV_(2), FOV_(3), FOV_(4)));
 if ~exist(matfile_summary, 'file')
     flag_processed_raw = false(obj.num_scans, obj.num_blocks);
-    flag_processed_denoised = flag_processed_raw; %#ok<NASGU>
+    flag_processed_denoised = flag_processed_raw;
     flag_processed = false(obj.num_scans, obj.num_blocks);
     save(matfile_summary, 'FOV_', 'flag_processed_raw',...
         'flag_processed_denoised', '-v7.3');
@@ -52,7 +52,7 @@ else
     end
 end
 
-%% when we process all blocks, just randomly select one block to get its results
+%% when we process all blocks, just select the first block to get its results
 if mblock==0
     mblock = find(flag_processed(mscan, :), 1, 'first');
     if isempty(mblock)
@@ -63,10 +63,10 @@ end
 % check whether the dada has been processed or not
 if obj.use_denoise
     var_name = sprintf('scan%d_block%d_denoised', mscan, mblock);
-    data_name = 'Y_denoised';
+%     data_name = 'Y_denoised';
 else
     var_name = sprintf('scan%d_block%d_raw', mscan, mblock);
-    data_name = 'Y_raw';
+%     data_name = 'Y_raw';
 end
 fprintf('video data: scan=%d, block=%d\n', mscan, mblock);
 
@@ -78,23 +78,27 @@ if flag_processed(mscan, mblock)
 end
 
 % data loader
-fprintf('\n    Loading the data of the selected scan.\n');
-if exist_in_workspace(data_name, 'base')
-    Y = evalin('base', sprintf('%s{%d,%d}', data_name,mscan, mblock));
-else
-    Y = [];
-end
-
-if isempty(Y)
-    neuron = obj.get_MF3D(mscan, mblock);
-    if obj.use_denoise
-        dl = neuron.dataloader_denoised;
-    else
-        dl = neuron.dataloader_raw;
-    end
-    Y = dl.load_tzrc();
-end
-fprintf('    Done\n');
+Y = obj.load_Y(mscan, mblock); 
+T = size(Y,2); 
+Y = double(Y(:, round(T/4):round(T*3/4)));  % select part of the data 
+Y = reshape(Y, obj.d1, obj.d2, obj.d3, []); 
+% fprintf('\n    Loading the data of the selected scan.\n');
+% if exist_in_workspace(data_name, 'base')
+%     Y = evalin('base', sprintf('%s{%d,%d}', data_name,mscan, mblock));
+% else
+%     Y = [];
+% end
+% 
+% if isempty(Y)
+%     neuron = obj.get_MF3D(mscan, mblock);
+%     if obj.use_denoise
+%         dl = neuron.dataloader_denoised;
+%     else
+%         dl = neuron.dataloader_raw;
+%     end
+%     Y = dl.load_tzrc();
+% end
+% fprintf('    Done\n');
 %% computing summary statistics
 summary_images = struct('std', zeros(obj.d1, obj.d2, obj.num_slices), ...
     'cn', zeros(obj.d1, obj.d2, obj.num_slices), ...
@@ -136,10 +140,10 @@ end
 flag_processed(mscan, mblock) = true;
 eval(sprintf('%s=summary_images;', var_name));
 if obj.use_denoise
-    flag_processed_denoised = flag_processed;  %#ok<NASGU>
+    flag_processed_denoised = flag_processed; 
     save(matfile_summary, var_name, 'flag_processed_denoised', '-append');
 else
-    flag_processed_raw = flag_processed;  %#ok<NASGU>
+    flag_processed_raw = flag_processed;
     save(matfile_summary, var_name, 'flag_processed_raw', '-append');
 end
 

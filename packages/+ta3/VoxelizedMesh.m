@@ -19,12 +19,9 @@ classdef VoxelizedMesh < dj.Computed
             [vertices, faces]= fetchn((ta3.MeshFragment & sprintf(...
                 'segmentation=%d and segment_id=%d', key.segmentation, key.segment_id)),...
                 'vertices', 'triangles');
-            try
-                indices = fetchn
-            catch
-                [subs_2p, ~] = mesh2volume(vertices, faces, options);
-                key.indices = sub2ind(options.dims_2p, subs_2p(:,1), subs_2p(:,2), subs_2p(:,3));
-            end
+            [subs_2p, ~] = mesh2volume(vertices, faces, options);
+            key.indices = sub2ind(options.dims_2p, subs_2p(:,1), subs_2p(:,2), subs_2p(:,3));
+            
             key.n_voxels = length(key.indices); 
             key.n_vertices = sum(cellfun(@length, vertices)); 
             key.n_faces = sum(cellfun(@length, faces)); 

@@ -7,6 +7,9 @@ if ~exist('mblock', 'var') || isempty(mblock)
 end
 if ~exist('T', 'var') || isempty(T)
     T = obj.video_T;
+    if numel(T)>1
+        T = T(mscan, mblock); 
+    end
 end
 
 % data loader for denoised data

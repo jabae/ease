@@ -1,5 +1,5 @@
 neuron.match_status.status(cell_id) = 1; 
-neuron.match_status.em_ids{cell_id} = em_id; 
+neuron.match_status.em_ids{cell_id} = segment_ids(em_id); 
 set(gco, 'backgroundcolor', 'red'); 
 set(ease.gui.btn_em_candidate, 'backgroundcolor', ease.gui.color_gray); 
 set(ease.gui.btn_em_ignore, 'backgroundcolor', ease.gui.color_gray);
@@ -14,4 +14,4 @@ catch
     fprintf('confidence value has not been updated yet.\n'); 
 end
 
-ease_show_2p_neuron; 
+cb_show_2p_neuron; 

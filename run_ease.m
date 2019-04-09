@@ -1,89 +1,56 @@
-%% setup packages and some configurations
-close all; clear; clc;
+if ~exist('ease', 'var')
+    fi.usepkg('ease'); 
+end 
 
-with_GUI = true;
-
-% folders related to the project
-dir_scripts = fileparts(which('run_ease.m'));
-dir_project = fileparts(dir_scripts);
-dir_data = fullfile(dir_project, 'data');   % place for storing data
-dir_results = fullfile(dir_project, 'results'); % place for storing results
-dir_fig = fullfile(dir_project, 'Figures'); % place for storing figures
-dir_video = fullfile(dir_project, 'Videos'); % place fore storing videos
-
-% packages to be used
+%% load packages
 fi.usepkg({'yaml', ... % YAML matlab
     'utils', ... % export matlab
     'idl', ... % ImagingDataLoader
     'oasis', ... % OASIS_matlab
-    'ease'}... % EASE };
-    );
+    'datajoint',... % use datajoint 
+    }); 
 
-%% choose the data to use
-datasets = {'pinky40', 'pinky100'};
-fprintf('\n**********choose the data to use**********\n');
-for m=1:length(datasets)
-    fprintf('%d: %s\n', m, datasets{m});
-end
-fprintf('********************************************\n');
+%% determine project folder, dataset and database
+ease.connect_database();
+ease.select_data();
 
-data_id = input('data ID: ');
-while true
-    if any(data_id==[1, 2])
-        data_name = datasets{data_id};
-        fprintf('you selected data %s\n', data_name);
-        break;
-    else
-        data_id = input('please type a valid data ID: ');
-    end
-end
+%% voxelize EM 
+ease.voxelize_em(); 
 
+%% choose FOV
+show_fov = false;
+ease.choose_FOV(show_fov);
 
-%% connect to the database
-ease_connect_database;
-if strcmpi(data_name, 'pinky40')
-    rel_mesh = ta3.MeshFragment;
-    rel_voxels = ta3.VoxelizedMesh;
-elseif strcmpi(data_name, 'pinky100')
-    rel_mesh = ta3p100.Mesh;
-    rel_voxels = ta3p100.VoxelizedMesh;
-else
-    error('the selected data has not saved in the database.');
-end
+%% crop and align the video data and the stack data 
+ease.load_stack();      % stack data
+ease.load_video();      % video data
 
-%% create a class object to manage options and pipelines
-yaml_path = fullfile(dir_scripts, sprintf('%s_config.yaml', data_name));
-if ~exist(yaml_path, 'file')
-    % create from default options 
-    ease = EM2P();
-    ease.write_config(yaml_path);
-else
-    ease = EM2P(yaml_path);
-end
+ease.rough_registration_video();  % rough registration 
+ease.align_video_stack(); % fine registration within the cropped area 
 
-% update data information
-ease.output_folder = fullfile(dir_results, data_name);
-ease.data_folder = fullfile(dir_data, data_name);
-ease.fig_folder = fullfile(dir_fig, data_name);
-ease.video_folder = fullfile(dir_video, data_name);
-ease.matfile_stack = 'stack_2p.mat';
-ease.matfile_video = 'functional_data.mat';
-ease.denoised_folder = 'cropped_denoised_video';
-ease.raw_folder = 'cropped_raw_video';
-ease.registration_csv = 'registration.csv';
-ease.matfile_transformation = 'coor_convert.mat';
-ease.matfile_em = 'em.mat';
-ease.matfile_stack = 'stack_2p.mat';
+% crop video
+ease.crop_video;
 
-if ~exist(ease.output_folder, 'dir')
-    mkdir(ease.output_folder);
-end
-if ~exist(ease.fig_folder, 'dir')
-    mkdir(ease.fig_folder);
-end
-if ~exist(ease.video_folder, 'dir')
-    mkdir(ease.video_folder);
+% cell array for storing raw/denoised data and its summary statistics  
+[Y_raw, Y_denoised] = ease.construct_Y();
+
+%% load EM info
+% ease.load_em(); 
+% EM_info = ease.em_data.EM_info;
+ease.get_em_boundaries(); 
+
+%% project EM masks onto the scanning planes 
+ease.project_em(); 
+ease.construct_Aem(); 
+ease.get_em_volume(); 
+
+%% save the current configurations
+ease.write_config();
+
+%% GUI
+if exist('with_GUI', 'var')  && with_GUI
+    ease.startGUI();
 end
 
-%% load data
-ease_get_ready; 
+%% create a flag indicating EASE is ready to be used.
+flag_ease_running = true;

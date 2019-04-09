@@ -1,0 +1,45 @@
+yaml_path: /data/home/zhoupc/github/F-image/packages/EASE/config.yaml
+data_folder: []
+output_folder: []
+denoised_folder: cropped_denoised_video
+raw_folder: cropped_raw_video
+matfile_video: functional_data.mat
+matfile_stack: stack_2p.mat
+registration_csv: registration.csv
+matfile_transformation: coor_convert.mat
+matfile_em: em.mat
+video_shifts:
+  ii: []
+  jj: []
+video_zvals: []
+video_zvals_updated: []
+video_Fs: 15.0
+video_T: 0.0
+use_denoise: false
+stack_shifts: []
+d1: []
+d2: []
+d3: []
+extra_margin: 5.0
+FOV: []
+FOV_stack: []
+align_max_zshift: 8.0
+num_scans: 8.0
+num_slices: 3.0
+num_blocks: 3.0
+dims_stack: [512.0, 512.0, 310.0]
+dims_video: [256.0, 256.0]
+range_2p: [400.0, 400.0, 310.0]
+scan_id: 1.0
+slice_id: 1.0
+block_id: 1.0
+options_init: {init_method: tf, order_statistics: l3norm, min_similarity: 0.6, clear_results: false,
+  save_fig: false, K_candidate: 3000.0, show_fig: true, K_new: 50.0}
+show_em_only: false
+em_shifts: []
+em_segmentation: 1.0
+em_load_flag: true
+em_zblur: 8.0
+em_scale_factor: 0.001
+score_method: corr
+nam_show: cn

@@ -25,8 +25,7 @@ em_mat_file = fullfile(obj.data_folder, obj.matfile_em);
 if isempty(obj.em_data)
     % check the existance of the EM matfile
     if ~exist(em_mat_file, 'file')
-        error('EM meshes have not been voxelized yet. You need stop everything and run ease_voxelize_em.m'); 
-        edit('ease_voxelize_em.m'); 
+        error('EM meshes have not been voxelized yet. You need stop everything and run ease.voxelize_em()');  
     end
     
     % map the data to memory
@@ -57,4 +56,7 @@ else
         'fetching data. So if your memory is large enough, \n', ...
         'you can set ease.em_load_flag as true to preload the data\n\n']);
 end
+
+%%  get EM boundaries 
+obj.get_em_boundaries(); 
 end

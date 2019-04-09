@@ -10,10 +10,26 @@ classdef EM2P < handle
         % YAML file for storing the configurations
         yaml_path = '';
         
+        % data name
+        data_name = '';
+        
+        % project folder
+        dir_project = '';
+        
+        % datasets
+        datasets_list = {};
+        
+        % databases
+        databases_list = {};
+        
         % data folder
         data_folder = ''; %folder for storing intermediate results
+        
         % output folder
         output_folder = '';
+        
+        % script folder
+        script_folder = '';
         
         % fig folder
         fig_folder = ''; % folder for saving figures
@@ -22,7 +38,7 @@ classdef EM2P < handle
         video_folder = ''; %folder for savign videos
         
         % video imaging data
-        matfile_video = ''; % file path
+        matfile_video = 'functional_data.mat'; % file path
         video_data = [];    % the mat file including information of video data
         video_loader = {};  % data loader for accesing video data
         video_shifts = struct('ii', [], 'jj', []);       % shifts in relative to 2p stack data
@@ -30,17 +46,19 @@ classdef EM2P < handle
         video_zvals_updated = [];   % updated z values for different planes.
         video_Fs = 15;      % frame rate
         video_T = 0;     % number of frames.
-        denoised_folder = ''; % folder of the denoising results for the cropped area
-        raw_folder = '';     % folder of the raw data of the cropped area
+        denoised_folder = 'cropped_denoised_video'; % folder of the denoising results for the cropped area
+        raw_folder = 'cropped_raw_video';     % folder of the raw data of the cropped area
         use_denoise = false; % use the denoised data for running CNMF
+        normalize_data = true; % normalize data or not 
+        summary_images = []; 
         
         % mat file for storing all 2p stack data
-        matfile_stack = '';
+        matfile_stack = 'stack_2p.mat';
         stack_shifts = {};
         
         % coordinate conversion between EM and 2p stack data
-        registration_csv = '';
-        matfile_transformation = '';
+        registration_csv = 'registration.csv';
+        matfile_transformation = 'coor_convert.mat';
         transformation = struct('A_convert', [], 'offset', []);
         
         % FOV information
@@ -70,18 +88,15 @@ classdef EM2P < handle
         % initialization
         options_init = struct();    % options for initialization
         
-        show_em_only = false; % show EM component when you display the merge of the EM mask and CNMF mask
-        
-        match_mask = true;    % use the spatial mask (true) or the spatial footprint (false) in
-        % the step of computing the matching score between EM & CNMF component
         
         % EM data
-        matfile_em = ''; % matfile for storing all EM data
+        matfile_em = 'em.mat'; % matfile for storing all EM data
         em_segmentation = 1;
         em_data = [];
         em_variables = [];
         em_info = [];
         em_ranges = [];
+        em_volume = [];     % binary variable to indicate whether a pixel is within the EM volume or not. 
         K_em = 0;
         em_shifts = [];     % shifts for EM volumes
         % pre-load EM data for faster speed. (default: true)
@@ -89,6 +104,7 @@ classdef EM2P < handle
         em_zblur = 8;          % the projection of each EM semgent onto one slice takes the nearby (-blur_size:blur_size) planes
         em_boundary = [];   % EM boundaries
         em_scale_factor = 0.001;  % a factor to map EM unit to um
+        show_em_only = false; % show EM component when you display the merge of the EM mask and CNMF mask
         
         % method for computing the matching scores
         score_method = 'corr' ;
@@ -99,23 +115,105 @@ classdef EM2P < handle
         % GUI
         gui = [];
         nam_show = 'cn';    % show correlation image
+        
+        % datajoint
+        dj_connected = false;
+        
+        % datajoint
+        dj_name = []; 
+        rel_mesh = [];
+        rel_voxels = [];
+        rel_footprints = [];
     end
     
     %% methods
     methods
         %% constructor and options setting
-        function obj = EM2P(path_yaml_file)
+        function obj = EM2P(path_yaml_file, start_new_project)
             if exist('path_yaml_file', 'var') && exist(path_yaml_file, 'file')
+                % start from a given yaml configuration
                 obj.read_config(path_yaml_file);
             else
-                EASE_folder = fileparts(which('ease_setup.m'));
-                obj.yaml_path = fullfile(EASE_folder, 'config_obj.yaml');
+                % start from a default yaml configuration
+                EASE_folder = fi.locate('ease', true);
+                path_yaml_file = fullfile(EASE_folder, 'config.yaml');
+                obj.read_config(path_yaml_file, true);
+                obj.yaml_path = '';   % don't overwrite the default config
+            end
+            
+            %
+            if ~exist('start_new_project', 'var') || isempty(start_new_project)
+                start_new_project = false;
+            end
+            
+            % determine project folder
+            if isempty(obj.dir_project)
+                tmp_file = fullfile(fi.locate('ease', true), '.projects.mat');
+                load(tmp_file, 'projects');
+                if isempty(projects)
+                    obj.init_project();
+                elseif length(projects)==1 && ~start_new_project
+                    obj.dir_project = projects{1};
+                    fprintf('project folder: %s\n', projects{1});
+                else
+                    fprintf('there are following projects: \n');
+                    fprintf('--0: create a new one\n');
+                    for m=1:length(projects)
+                        fprintf('--%d: %s\n', m, projects{m});
+                    end
+                    tmp_k = input('\nchoose: ');
+                    try
+                        obj.dir_project = projects{tmp_k};
+                    catch
+                        obj.init_project();
+                    end
+                end
+            end
+            
+            % load databases and datasets
+            temp = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
+            if isempty(obj.datasets_list)
+                obj.datasets_list = temp.datasets_list; 
+            else
+                obj.datasets_list = union(obj.datasets_list, temp.datasets_list);
+            end
+            if isempty(obj.databases_list) 
+                obj.databases_list = temp.databases_list;
+            else
+                obj.databases_list = union(obj.databases_list, temp.databases_list);
+            end
+        end
+        
+        %% delete a project
+        function del_project(obj)
+            tmp_file = fullfile(fi.locate('ease', true), '.projects.mat');
+            load(tmp_file, 'projects');
+            if isempty(projects)
+                return;
+            else
+                fprintf('there are following projects: \n');
+                for m=1:length(projects)
+                    fprintf('--%d: %s\n', m, projects{m});
+                end
+                tmp_k = input('\ndelete which one: ');
+                try
+                    projects(tmp_k) = [];
+                    save(tmp_file, 'projects', '-append');
+                catch
+                    return;
+                end
             end
         end
         
         %% load and write configurations
-        read_config(obj, path_file);
+        read_config(obj, path_file, quiet);
         write_config(obj, path_file);
+        
+        %% select data
+        data_name = select_data(obj, datasets);
+        
+        %% how-tos
+        how_tos(obj);
         
         %% load 2p stack data
         load_stack(obj);
@@ -126,6 +224,9 @@ classdef EM2P < handle
         %% load functional video data
         load_video(obj);
         
+        %% load the video data 
+        Y = load_Y(obj, mscan, mblock); 
+        
         %% create data loader
         [dl_Yr, dl_Yd] = create_dataloader(obj, scan_id, block_id, T);
         
@@ -135,20 +236,23 @@ classdef EM2P < handle
         %% align the video data and the 2p stack data
         align_video_stack(obj);
         
+        %% rough registration of the video data and stack data.
+        [video_shifts, z_vals] = rough_registration_video(obj)
+        
         %% extract EM volumes given the scan ID
         Aem_proj = extract_em_segments(obj, mscan, mslice, ssub);
         
         %% get EM masks in a specified scan ID
         Aem = get_Aem_scan(obj, mscan, ssub);
         
+        %% new version of loading Aem 
+        [Aem, segment_ids] = load_Aem(obj, mscan); 
+        
         %% create/load neuron objects for all video data
-        neuron = get_MF3D(obj, T, create_new);
+        neuron = get_MF3D(obj, create_new);
         
         %% get all calium imaging data
         summary_images = calculate_summary_images(obj, mscan, mblock)
-        
-        %% load video data into memory
-        neuron = load_video_mem(obj, mscan, mblock, create_new);
         
         %% create masks for EM volumes
         get_em_masks(obj);
@@ -158,6 +262,9 @@ classdef EM2P < handle
             tmp_file = fullfile(obj.output_folder, 'obj.mat');
             save(tmp_file, 'obj');
         end
+        
+        %% voxelize EM meshes
+        voxelize_em(obj, use_parallel);
         
         %% save the current results of the sources extraction
         save_MF3D(obj);
@@ -179,8 +286,94 @@ classdef EM2P < handle
         
         %% set options for voxelization
         options = set_voxelization_options(obj, voxel_em);
+        
+        %% set options for projecting EM
+        options = set_projections_options(obj);
+        
+        %% connect to database
+        connect_database(obj, database_list, dj_username, dj_password)
+        
+        %% visualize the mesh of one EM segment
+        visualize_em_mesh(obj, em_id, new_figure);
+        
+        %% visualize the voxelized version of one EM segment
+        visualize_em_voxels(obj, em_id, new_figure);
+        
+        %% collect EM information
+        collect_em_info(obj);
+        
+        %% visualize EM footprints 
+        visualize_em_footprints(obj, em_id, new_figure)
+        
+        %% project EM 
+        project_em(obj, use_parallel); 
+        
+        %% add a new dataset 
+        add_dataset(obj); 
+        
+        %% convert indices from 2p stack to video 
+        [idx_new, dims_new] = convert_idx(obj, idx); 
+        
+        %% extract EM footprints given a list of EM 
+        [Aem, segments_id, segments_del] = get_em_footprints(obj, em_ids, scan_id); 
+       
+        %% extract video data 
+        Y = get_Y(obj, mscan, mblock); 
+        
+        %% get the EM volume on the scanning planes  
+        spatial_range = get_spatial_range(obj); 
+    
+        %% construct EM footprints on the calcium imaging planes 
+        construct_Aem(obj); 
+        
+        %% add EM components to the white/black list     
+        add2whitelist(obj, segment_ids, reason)
+        add2blacklist(obj, segment_ids, reason)
+        
+        %% construct a data container 
+        [Y_raw, Y_denoised] = construct_Y(obj); 
+        
+        %% release space for storing the raw video 
+        freespace_Y(obj, mscan, mblock); 
+        
+        %% close all windows except the main window 
+        function closeall(obj)
+            %%
+            set(obj.gui.fig_main, 'HandleVisibility', 'off');
+            close all;
+            set(obj.gui.fig_main, 'HandleVisibility', 'on');
+        end 
+        
+        %% create configurations for running EASE 
+        function configs = create_running_configs(obj, K_new, K_candidates, nb, min_rank)
+            options = obj.options_init;
+            niter = length(nb);
+            configs = cell(niter, 1);
+            
+            % configurations for running EASE
+            for m=1:niter
+                options.K_candidate = K_candidates(m);
+                options.K_new = K_new(m);
+                if m>1
+                    options.clear_results = false;
+                end
+                configs{m} = struct('options_init', options,...
+                    'min_rank', min_rank(m), 'nb', nb(m));
+            end
+        end 
+        %% load em volume 
+        function get_em_volume(obj)
+            
+            file_name = fullfile(obj.output_folder, ...
+                sprintf('segmentation_%d', obj.em_segmentation), ...
+                'em_volume.mat');
+            if exist(file_name, 'file')
+                temp = load(file_name); 
+                obj.em_volume = temp.em_volume; 
+            else
+                obj.construct_Aem(); 
+            end
+        end
     end
-    
-    
 end
 

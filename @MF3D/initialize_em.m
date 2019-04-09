@@ -137,7 +137,7 @@ Y = bsxfun(@minus, Y, mean(Y, 2));
 %% create matrices for storing results
 [d, T] = size(Y);
 
-if clear_results
+if clear_results || isempty(obj.A)
     K_pre = 0;
     obj.A = zeros(d, K_new);
     obj.A_mask = zeros(d, K_new);

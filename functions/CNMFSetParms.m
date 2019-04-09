@@ -117,6 +117,8 @@ Names = [
     'spatial_algorithm  ' % method for updating spatial components 
     'with_overlap_init  ' % initialize repeat neurons across different patch 
     'save_intermediate  ' % save intermediate results or not 
+    'normalize_data     ' % normalize data or not 
+    'pre_process_data   ' % preprocess data 
     ];
 
 [m,n] = size(Names);
@@ -306,6 +308,8 @@ Values = [
     {'hals'}
     {false}
     {false}
+    {true}
+    {true}
     ];
 
 for j = 1:m

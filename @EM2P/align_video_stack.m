@@ -1,31 +1,33 @@
 function align_video_stack(obj)
-%% what does this function do 
+%% what does this function do
 %{
-    align the video data and the 2p stack data in the cropped FOV 
+    align the video data and the 2p stack data in the cropped FOV
 %}
 
-%% inputs: 
+%% inputs:
 %{
-    2p stack data and video data within the cropped FOV 
+    2p stack data and video data within the cropped FOV
 %}
 
-%% outputs: 
+%% outputs:
 %{
     after FOV alginment, obj.video_zvals_updated will be updated and the
-    shfits of 2p data in x-y plane are saved into obj.stack_shifts 
+    shfits of 2p data in x-y plane are saved into obj.stack_shifts
 %}
 
-%% author: 
+%% author:
 %{
-    Pengcheng Zhou 
-    Columbia University, 2018 
+    Pengcheng Zhou
+    Columbia University, 2018
     zhoupc1988@gmail.com
 %}
 
-%% code 
+%% code
 if ~isempty(obj.video_zvals_updated)
-   fprintf('The data have been aligned once. \n Please set ease.video_zvals_updated = [] if you want to align again.\n '); 
-   return; 
+    fprintf('The data have been aligned once. \n Please set ease.video_zvals_updated = [] if you want to align again.\n');
+    return;
+else
+    fprintf('Doing a fine registration between the stack data and the video data.\n');
 end
 
 %% shifts for the stack data and video data
@@ -42,7 +44,7 @@ z_shift = obj.align_max_zshift;    % the best match will be searched within fram
 %% FOV info
 ssub = obj.dims_stack(1) / obj.dims_video(1);
 
-FOV_ = obj.FOV; 
+FOV_ = obj.FOV;
 FOV_stack_ = obj.FOV_stack;
 d1_ = obj.d1;
 d2_ = obj.d2;
@@ -51,22 +53,22 @@ d2_stack = d2_ * ssub;
 
 %% compute the relative shift for 2p stack data
 if ~exist_in_workspace('stack_2p', 'base')
-    % if stack data was not loaded, load it. 
+    % if stack data was not loaded, load it.
     obj.load_stack();
 end
 stack_2p = evalin('base', 'stack_2p');
 
 % images showing the performances of motion correction
 img_match_fov = cell(obj.num_scans, obj.num_slices);
-temp = (rand(20)>0.8); 
-tmp_kernel = temp / sum(temp(:));   % used to normalize pixel values for balancing colors 
+temp = (rand(20)>0.8);
+tmp_kernel = temp / sum(temp(:));   % used to normalize pixel values for balancing colors
 
-% show progress bar 
-fprintf('\n'); 
-for m=1:obj.num_scans * obj.num_slices 
-   fprintf('|');  
+% show progress bar
+fprintf('\n');
+for m=1:obj.num_scans * obj.num_slices
+    fprintf('|');
 end
-fprintf('\n'); 
+fprintf('\n');
 for m=1:obj.num_scans
     for n=1:obj.num_slices
         dl_video = obj.video_loader{m, n, 1};
@@ -74,16 +76,16 @@ for m=1:obj.num_scans
         % loading video data.
         dy = round(shifts_video_ii(m, n));
         dx = round(shifts_video_jj(m, n));
-        T = dl_video.num_frames; 
+        T = dl_video.num_frames;
         tmpY = dl_video.load_tzrc(round([T/4, T*3/4]), [1,1], FOV_(1:2)+dy, FOV_(3:4)+dx);
         img_video = imresize(mean(tmpY, 3), ssub);
-        img_video_norm = img_video ./ imfilter(img_video, tmp_kernel, 'replicate'); 
+        img_video_norm = img_video ./ imfilter(img_video, tmp_kernel, 'replicate');
         % loading 2p stack data and find the best match
         z = max(1, z_vals(m, n)-z_shift);   % bottom candinate plane
         vmax = 0;
         while z<= min(obj.dims_stack(3), z_vals(m,n)+z_shift)
             img_stack = stack_2p(FOV_stack_(1):FOV_stack_(2), FOV_stack_(3):FOV_stack_(4), z);
-            img_stack_norm = img_stack ./ imfilter(img_stack, tmp_kernel, 'replicate'); 
+            img_stack_norm = img_stack ./ imfilter(img_stack, tmp_kernel, 'replicate');
             temp = normxcorr2(img_video_norm, img_stack_norm);
             tmp_max = max(temp(:));
             [ii, jj, ~] = find(temp==tmp_max);
@@ -107,10 +109,10 @@ for m=1:obj.num_scans
             z_vals(m, n)) / quantile(img_stack(:), 0.99);
         
         img_match_fov{m, n} = img;
-        fprintf('.'); 
+        fprintf('.');
     end
 end
-fprintf('\n'); 
+fprintf('\n');
 
 obj.FOV = FOV_;
 obj.FOV_stack = FOV_stack_;

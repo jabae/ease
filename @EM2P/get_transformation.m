@@ -49,7 +49,7 @@ else
     offset = tmpA(4, :);
     
     % save the results
-    obj.transformation = struct('A_convert', temp.A_convert, 'offset', temp.offset);
+    obj.transformation = struct('A_convert', A_convert, 'offset', offset);
     
     temp_matfile = fullfile(obj.data_folder, obj.matfile_transformation);
     save(temp_matfile, 'A_convert', 'offset', 'ref_ids', 'y_2p', 'y_em');

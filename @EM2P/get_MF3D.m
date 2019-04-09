@@ -1,4 +1,4 @@
-function neuron = get_MF3D(obj, T, create_new)
+function neuron = get_MF3D(obj, create_new)
 %% what does this function do
 %{
     create a class object for storing the precessing results of the selected scan and block
@@ -26,9 +26,6 @@ function neuron = get_MF3D(obj, T, create_new)
 mscan = obj.scan_id;
 mblock = obj.block_id;
 
-if ~exist('T', 'var') || isempty(T)
-    T = obj.video_T;
-end
 if ~exist('create_new', 'var')
     create_new = false;
 end
@@ -58,13 +55,24 @@ end
 %% load data directly
 if ~create_new
     % existed already
-    tmp_file = fullfile(folder_mf3d, sprintf('%s.mat', var_name)); 
+    tmp_file = fullfile(folder_mf3d, sprintf('%s.mat', var_name));
     if exist(tmp_file, 'file')
-        load(tmp_file, var_name); 
+        
+        fprintf('load an existing MF3D wrapper for (scan %d, block %d).\n', mscan, mblock);
+        
+        load(tmp_file, var_name);
         neuron = eval(var_name);
+        
+        if isempty(neuron.P.sn)
+            summary_images = obj.calculate_summary_images();
+            neuron.P.sn = neuron.reshape(summary_images.sn, 1);
+            
+        end
+        obj.summary_images = obj.calculate_summary_images();
+
         return;
     else
-        fprintf('the desired MF3D wrapper was not created yet. create a new one.\n');
+        fprintf('create a MF3D wrapper for (scan %d, block %d).\n', mscan, mblock);
     end
 end
 
@@ -73,24 +81,18 @@ end
 neuron = MF3D('d1', obj.d1, 'd2', obj.d2, 'd3', obj.d3,...
     'se', strel(ones(3,3,3)), 'search_method', 'dilate');
 neuron.Fs = obj.video_Fs;
-if mblock>0
-    [dl_Yr, dl_Yd] = obj.create_dataloader(mscan, mblock, T);
-    % dataloader for single blocks
-    neuron.dataloader_denoised = dl_Yd;
-    neuron.dataloader_raw = dl_Yr;
-    if obj.use_denoise
-        neuron.dataloader = neuron.dataloader_denoised;
-    else
-        neuron.dataloader = neuron.dataloader_raw;
-    end
-    %% save the results
-    flag_created(mscan, mblock) = true; %#ok<NASGU>
-    eval(sprintf('%s = neuron;', var_name));
-    save(matfile_mf3d, var_name, 'flag_created', '-append');
-else
-    eval(sprintf('%s = neuron;', var_name));
-    save(matfile_mf3d, var_name, '-append'); 
-end
+neuron.spatial_range = obj.em_volume(:, mscan);
+neuron.options.normalize_data  = obj.normalize_data; 
+neuron.options.deconv_options = struct('type', 'ar1', ... % model of the calcium traces. {'ar1', 'ar2'}
+    'method', 'foopsi', ... % method for running deconvolution {'foopsi', 'constrained', 'thresholded'}
+    'smin', -3, ...         % minimum spike size. When the value is negative, the actual threshold is abs(smin)*noise level
+    'optimize_pars', true, ...  % optimize AR coefficients
+    'optimize_b', true, ...% optimize the baseline);
+    'max_tau', 100, ...    % maximum decay time (unit: frame);
+    'remove_large_residuals', true); % remove large residuals
 
+obj.summary_images = obj.calculate_summary_images();
+neuron.P.sn = neuron.reshape(obj.summary_images.sn, 1);
 
+fprintf('done\n');
 end

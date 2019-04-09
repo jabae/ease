@@ -5,6 +5,10 @@ if ~exist('EM_masks', 'var')
 end
 
 % get summary images 
+if ~exist('summary_images', 'var') 
+    summary_images = ease.summary_images; 
+end 
+
 ssub = ease.dims_stack(1) / ease.dims_video(1); 
 mscan = ease.scan_id; 
 

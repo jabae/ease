@@ -3,12 +3,10 @@ classdef MF3D < handle
     properties
         % spatial
         A;          % spatial components of neurons
-        A_prev;     % previous estimation of A
         A_mask;     % spatial support to neuron A.
         A_corr;     % correlation betwen the raw video and C
         % temporal
         C;          % temporal components of neurons
-        C_prev;     % previous estimation of C
         C_raw;      % raw traces of temporal components
         S;          % spike counts
         kernel;     % calcium dynamics. this one is less used these days.
@@ -73,7 +71,7 @@ classdef MF3D < handle
         dataloader_raw = [];  % data loader for the raw data
         
         scores = [];  % matching scores
-        tuning_curve = {}; % tuning curve of each neuron 
+        tuning_curve = {}; % tuning curve of each neuron
         
     end
     
@@ -115,7 +113,7 @@ classdef MF3D < handle
                 return;
             end
             if ~exist('add_to_black_list', 'var') || isempty(add_to_black_list)
-                add_to_black_list = false; 
+                add_to_black_list = false;
             end
             
             if islogical(ind)
@@ -146,15 +144,15 @@ classdef MF3D < handle
             try obj.tags(ind) =[]; catch; end
             if ~isempty(obj.match_status.status)
                 % add these deleted neurons to a blacklist
-                temp = cell2mat(obj.match_status.em_ids(ind));
-                if add_to_black_list
-                    obj.black_list = unique([obj.black_list; reshape(temp, [], 1)]);
-                end
+                %                 temp = cell2mat(obj.match_status.em_ids(ind));
+                %                 if add_to_black_list
+                %                     obj.black_list = unique([obj.black_list; reshape(temp, [], 1)]);
+                %                 end
                 % delete
                 obj.match_status.status(ind) = [];
                 obj.match_status.em_ids(ind) = [];
                 obj.match_status.confidence(ind) = [];
-                obj.match_status.scores(ind) = []; 
+                obj.match_status.scores(ind) = [];
             end
             
             % save the log
@@ -169,13 +167,13 @@ classdef MF3D < handle
         Amask = determine_spatial_support(obj);
         
         %% update spatial components
-        update_spatial(obj, Y, with_em);
+        update_spatial(obj, Y, with_em, preprocess_Y);
         
         %% update temporal components
-        [C_offset] = update_temporal(obj, Y, allow_deletion, wight_em);
+        [C_offset] = update_temporal(obj, Y, allow_deletion, wight_em, preprocess_Y);
         
         %% update background
-        update_background(obj, Yr);
+        update_background(obj, Yr, preprocess_Y);
         
         %% reconstruct background
         function Yb = reconstruct_background(obj)
@@ -291,7 +289,7 @@ classdef MF3D < handle
             n = size(Aem, 1);
             Aem_sum = sum(Aem, 1);
             Aem_std = sqrt(sum(Aem.^2,1) - (Aem_sum.^2/n));
-
+            
             %% compute matching score
             A_ = obj.A;
             A_(em_mask, :) = [];
@@ -305,114 +303,97 @@ classdef MF3D < handle
             %             temp2 = (P_'*Aem-mean(P_,1)'*mean(Aem,1)) ./ ...
             %                 (std(P_, 0, 1)'*std(Aem, 0, 1));
             temp2 = P_'*Aem - P_sum'*(Aem_sum/n);
-            temp2 = bsxfun(@times, temp2, 1./P_std'); 
-            temp2 = bsxfun(@times, temp2, 1./Aem_std); 
+            temp2 = bsxfun(@times, temp2, 1./P_std');
+            temp2 = bsxfun(@times, temp2, 1./Aem_std);
             
             temp = temp1 .* temp2;
             temp(isnan(temp)) = 0;
             scores = sparse(temp);
-            obj.scores = scores; 
-%             
-%             K = size(obj.A, 2); 
-%             Kem = size(scores, 2); 
-%             ind = sub2ind([K, Kem], 1:K, cell2mat(obj.match_status.s
-%             obj.match_status.scores = scores(
+            obj.scores = scores;
+            %
+            %             K = size(obj.A, 2);
+            %             Kem = size(scores, 2);
+            %             ind = sub2ind([K, Kem], 1:K, cell2mat(obj.match_status.s
+            %             obj.match_status.scores = scores(
         end
         
         %% evaluate matching performance
-        confidence = evaluate_matching_confidence(obj, Aem, Yr); 
-%             % check the spatial mask 
-%             if iscell(Aem)
-%                 Aem = obj.convert_matrix(Aem);
-%             end
-%             em_mask = (sum(Aem, 2)<=0);   % constrain to the area within the EM volume
-%             Aem(em_mask, :) = [];
-%             n = size(Aem, 1);
-%             Aem_sum = sum(Aem, 1);
-%             Aem_std = sqrt(sum(Aem.^2,1) - (Aem_sum.^2/n));
-% 
-%             %% compute correlation 
-%             if ~exist('Yr', 'var') || isempty(Yr)
-%                 if isempty(obj.frame_range)
-%                     Yr = evalin('base', 'Y_cnmf');
-%                 else
-%                     temp = obj.frame_range;
-%                     Yr = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
-%                 end
-%             end
-%             Yres = obj.reshape(Yr, 1) - obj.A*obj.C - obj.b*obj.f;
-%             Yres = bsxfun(@minus, Yres, mean(Yres, 2));
-%             var_Yres = sum(Yres.^2, 2);
-%             tmpA_corr = zeros(size(obj.A));
-%             for m=1:size(obj.A, 2)
-%                 ci = obj.C(m, :);
-%                 ci = ci - mean(ci); 
-%                 ai = obj.A(:, m);
-%                 tmpA_corr(:, m) = (Yres*ci' + ai*(ci*ci')) ...
-%                     ./sqrt(var_Yres+(ai.^2)*(ci*ci'))/sqrt(ci*ci'); % approximate the variance
-%             end
-%             obj.A_corr = tmpA_corr; 
-%           
-%             %% compute matching score
-%             A_ = obj.A;
-%             A_(em_mask, :) = [];
-%             A_(A_<=0) = 0;
-%             P_ = obj.A; %obj.A_mask .* tmpA_corr;
-%             P_(em_mask, :) = [];
-%             P_sum = sum(P_, 1);
-%             P_std = sqrt(sum(P_.^2, 1) - (P_sum.^2/n));
-%             
-%             temp1 = bsxfun(@times, A_'*(Aem>0), 1./sum(A_,1)'); % explained signal with different masks
-%             temp2 = P_'*Aem - P_sum'*(Aem_sum/n);  % a faster way of computing correlation coefficients
-%             temp2 = bsxfun(@times, temp2, 1./P_std'); 
-%             temp2 = bsxfun(@times, temp2, 1./Aem_std); 
-%           
-%             temp = temp1 .* temp2; 
-%             temp(isnan(temp)) = 0;
-%             obj.scores = sparse(temp); 
-%             
-%             %% compute matching confidence 
-%             K = size(A_, 2); 
-%             confidence = zeros(1, K);
-%             best_scores = zeros(1, K); 
-%             for m=1:K 
-%                 em_id = obj.match_status.em_ids{m};
-%                 temp = obj.scores(m, :); 
-%                 v_select = temp(em_id);
-%                 temp(em_id) = -inf; 
-%                 v_others = max(temp); 
-%                 confidence(m) = v_select / v_others; 
-%                 best_scores(m)= v_select; 
-%             end 
-%             obj.match_status.confidence = confidence;
-%             obj.match_status.scores = best_scores; 
-%           end
-        
+        confidence = evaluate_matching_confidence(obj, Yr, Aem, segment_ids);
+  
         %% initialization given EM masks
         ind_voxels_em = initialize_em(obj, Aem, Y, options, black_list, white_list);
+        %% initialization given EM masks
+        [ai, ci, si, ci_raw] = initialize_one(obj, ai_em, Y);
+        
+        %% initialize multiple neurons given their EM masks
+        initialize_multiple(obj, Aem, segment_ids, Y, options);
         
         %% deconvolve all temporal components
         C_ = deconvTemporal(obj, use_parallel, method_noise)
         
-        %% run HALS
-        function hals(obj, Y, weight_em, with_EM_info)
-            if ~exist('Y', 'var') || isempty(Y)
-                if isempty(obj.frame_range)
-                    Y = evalin('base', 'Y_cnmf');
-                else
-                    temp = obj.frame_range;
-                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
-                end
+        %% preprocess Y
+        function Y = preprocess(obj, Y)
+            Y = obj.reshape(Y, 1);
+            % select frames to be analyzed
+            if isempty(obj.frame_range)
+                Y = double(Y);
+            else
+                t0 = obj.frame_range(1);
+                t1 = obj.frame_range(2);
+                Y = double(Y(:, t0:t1));
             end
+            
+            % normalize data
+            if obj.options.normalize_data
+                sn = obj.reshape(obj.P.sn, 1);
+                Y = bsxfun(@times, Y, 1./sn);
+            end
+            
+            % remove all pixels outside of the EM volume
+            if ~isempty(obj.spatial_range)
+                Y(~obj.spatial_range, :) = 0; % remove pixels outside of the EM volume
+            end
+        end
+        %% run HALS
+        function hals(obj, Y, weight_em, with_EM_info, preprocess_Y)
+            
             if ~exist('weight_em', 'var') || isempty(weight_em)
-                weight_em = true; 
+                weight_em = true;
             end
             if ~exist('with_EM_info', 'var') || isempty(with_EM_info)
                 with_EM_info = true;
             else
-                with_EM_info = false; 
-                weight_em = false; 
+                with_EM_info = false;
+                weight_em = false;
             end
+            if ~exist('preprocess_Y', 'var') || isempty(preprocess_Y)
+                preprocess_Y = obj.options.pre_process_data;
+            end
+            
+            %% preprocess Y
+            if preprocess_Y
+                % select frames to be analyzed
+                if isempty(obj.frame_range)
+                    Y = double(Y);
+                else
+                    t0 = obj.frame_range(1);
+                    t1 = obj.frame_range(2);
+                    Y = double(Y(:, t0:t1));
+                end
+                
+                % normalize data
+                if obj.options.normalize_data
+                    sn = obj.reshape(obj.P.sn, 1);
+                    Y = bsxfun(@times, Y, 1./sn);
+                end
+                
+                % remove all pixels outside of the EM volume
+                if ~isempty(obj.spatial_range)
+                    Y(~obj.spatial_range, :) = 0; % remove pixels outside of the EM volume
+                end
+                preprocess_Y = false;
+            end
+            
             %% get the spatial range
             ind = obj.spatial_range;
             if ~isempty(ind)
@@ -420,10 +401,9 @@ classdef MF3D < handle
             end
             
             %% run HALS
-%             obj.update_temporal(Y, false, weight_em);
-            obj.update_background(Y);
-            obj.update_temporal(Y, false, weight_em);
-            obj.update_spatial(Y, with_EM_info);
+            obj.update_background(Y, preprocess_Y);
+            obj.update_temporal(Y, false, weight_em, preprocess_Y);
+            obj.update_spatial(Y, with_EM_info, preprocess_Y);
         end
         
         %% function remove false positives
@@ -437,92 +417,17 @@ classdef MF3D < handle
         end
         
         %% order ROIs
-        function [srt] = orderROIs(obj, srt)
-            % srt: sorting order
-            nA = sqrt(sum(obj.A.^2));
-            nr = length(nA);
-            if nargin<2
-                srt='srt';
-            end
-            K = size(obj.C, 1);
-            
-            if ischar(srt)
-                if strcmp(srt, 'mean')
-                    if obj.options.deconv_flag
-                        temp = mean(obj.C,2)'.*sum(obj.A);
-                    else
-                        temp = mean(obj.C_raw.*(obj.C_raw>0),2)'.*sum(obj.A);
-                    end
-                    [~, srt] = sort(temp, 'descend');
-                elseif strcmp(srt, 'sparsity_spatial')
-                    temp = sqrt(sum(obj.A.^2, 1))./sum(abs(obj.A), 1);
-                    [~, srt] = sort(temp);
-                elseif strcmp(srt, 'sparsity_temporal')
-                    temp = sqrt(sum(obj.C_raw.^2, 2))./sum(abs(obj.C_raw), 2);
-                    [~, srt] = sort(temp, 'descend');
-                elseif  strcmpi(srt, 'pnr')
-                    pnrs = max(obj.C, [], 2)./std(obj.C_raw-obj.C, 0, 2);
-                    [~, srt] = sort(pnrs, 'descend');
-                elseif strcmpi(srt, 'l3l2')
-                    l3l2 = sum(obj.C_raw.^3, 2) ./ (sum(obj.C_raw.^2,2).^(1.5));
-                    [~, srt] = sort(l3l2, 'descend');
-                elseif strcmpi(srt, 'temporal_cluster')
-                    obj.orderROIs('pnr');
-                    dd = pdist(obj.C_raw, 'cosine');
-                    tree = linkage(dd, 'complete');
-                    srt = optimalleaforder(tree, dd);
-                elseif strcmpi(srt, 'spatial_cluster')
-                    obj.orderROIs('pnr');
-                    A_ = bsxfun(@times, obj.A, 1./sqrt(sum(obj.A.^2, 1)));
-                    temp = 1-A_' * A_;
-                    dd = temp(tril(true(size(temp)), -1));
-                    dd = reshape(dd, 1, []);
-                    tree = linkage(dd, 'complete');
-                    srt = optimalleaforder(tree, dd);
-                elseif strcmpi(srt, 'confidence')
-                    [~, srt] = sort(obj.match_status.confidence, 'descend');
-                    
-                elseif strcmpi(srt, 'match_scores')
-                    [~, srt] = sort(obj.match_status.scores, 'descend');
-                else %if strcmpi(srt, 'snr')
-                    snrs = var(obj.C, 0, 2)./var(obj.C_raw-obj.C, 0, 2);
-                    [~, srt] = sort(snrs, 'descend');
-                end
-            end
-            obj.A = obj.A(:, srt);
-            obj.C = obj.C(srt, :);
-            
-            try
-                obj.A_mask = obj.A_mask(:, srt);
-                obj.C_raw = obj.C_raw(srt,:);
-                obj.S = obj.S(srt, :);
-                obj.ids = obj.ids(srt);
-                obj.labels = obj.labels(srt); 
-                obj.match_status.status = obj.match_status.status(srt);
-                obj.match_status.em_ids = obj.match_status.em_ids(srt);
-                if ~isempty(obj.scores)
-                    obj.scores = obj.scores(srt, :);
-                end
-                if ~isempty(obj.match_status.confidence)
-                    obj.match_status.confidence = obj.match_status.confidence(srt);
-                end
-                if ~isempty(obj.match_status.confidence)
-                    obj.match_status.scores = obj.match_status.scores(srt);
-                end
-                obj.A_corr = obj.A_corr(:, srt);
-                
-            end
-        end
-        
+        [srt] = orderROIs(obj, srt); 
+       
         %% normalize data
         function [Y, Y_sn] = normalize_data(obj, Y, update_var)
             Y = double(obj.reshape(Y,1));
             if isempty(obj.P.sn)
-                T = min(size(Y, 2), 5000); 
+                T = min(size(Y, 2), 5000);
                 Y_sn = GetSn(bsxfun(@minus, Y(:, 1:T), mean(Y(:, 1:T), 2)));
-                obj.P.sn = Y_sn; 
+                obj.P.sn = Y_sn;
             else
-                Y_sn = reshape(obj.P.sn, [], 1); 
+                Y_sn = reshape(obj.P.sn, [], 1);
             end
             Y = bsxfun(@times, Y, 1./Y_sn);
             
@@ -544,31 +449,24 @@ classdef MF3D < handle
         
         %% compute the residual
         function Yres = compute_residual(obj, Y)
-            if ~exist('Y', 'var') || isempty(Y)
-                if isempty(obj.frame_range)
-                    Y = evalin('base', 'Y_cnmf');
-                    Y = obj.reshape(Y, 1);
-                else
-                    tmp_range = obj.frame_range;
-                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', tmp_range(1), tmp_range(2)));
-                end
+            if obj.options.pre_process_data
+                Y = obj.preprocess(Y);
             end
             
-            Y = obj.reshape(Y, 1);            
             Yres = bsxfun(@minus, obj.reshape(Y,1) - ...
                 obj.b*obj.f - obj.A*obj.C, obj.b0);
         end
         
-        %% compute RSS 
-        function rss = compute_rss(obj, Y)
-            if ~exist('Y', 'var') || isempty(Y)
-                if isempty(obj.frame_range)
-                    Y = evalin('base', 'Y_cnmf');
-                else
-                    temp = obj.frame_range;
-                    Y = evalin('base', sprintf('Y_cnmf(:, %d:%d)', temp(1), temp(2)));
-                end
+        %% compute RSS
+        function rss = compute_rss(obj, Y, preprocess_Y)
+            if ~exist('preprocess_Y', 'var') || isempty(preprocess_Y)
+                preprocess_Y = true;
             end
+            % preprocess Y
+            if preprocess_Y
+                Y = obj.preprocess(Y);
+            end
+            
             temp = bsxfun(@minus, obj.reshape(Y,1) - obj.b*obj.f-obj.A*obj.C, obj.b0);
             rss = sum(temp(:).^2);
         end
@@ -578,11 +476,11 @@ classdef MF3D < handle
         %% show image
         function showImage(obj, ai, orientation, vlim, pixel_size, color_scalebar)
             if ~exist('pixel_size', 'var')
-                pixel_size = []; 
+                pixel_size = [];
             end
             if ~exist('color_scalebar', 'var') || isempty(color_scalebar)
-                color_scalebar = 'w'; 
-            end 
+                color_scalebar = 'w';
+            end
             if iscell(ai)  % images one each plane are elements of the cell array
                 [d1, d2, ~] = size(ai{1});
                 d3 = length(ai);
@@ -592,13 +490,17 @@ classdef MF3D < handle
                 elseif ndims(ai) ~=3
                     ai = obj.reshape(ai, 3);
                 end
-               
+                
                 [d1, d2, d3] = size(ai);
                 img_max = max(ai(:))*0.8;
                 if ~exist('vlim', 'var') || isempty(vlim)
                     vlim = [0, img_max];
                 end
+                if diff(vlim)==0
+                    vlim(2) = vlim(2) + 1;
+                end
             end
+            
             if ~exist('orientation', 'var') || isempty(orientation)
                 orientation = 'vertical';
             end
@@ -630,12 +532,12 @@ classdef MF3D < handle
                 set(gca, 'xtick', [], 'ytick', []);
                 pos_ax = pos_ax + dpos;
                 
-                if ~isempty(pixel_size) && (m==1) % draw scale bar 
-                    hold on; 
+                if ~isempty(pixel_size) && (m==1) % draw scale bar
+                    hold on;
                     plot(d2-3- [0, 20]/pixel_size, d1-[1,1]*3, 'color', color_scalebar, 'linewidth', 3);
-                  %  text(d2-5-20/pixel_size, d1-7, '20um', 'color', 'w', ...
-                   %     'fontsize', round(20/pixel_size/d2*75), 'fontweight', 'bold'); 
-                end 
+                    %  text(d2-5-20/pixel_size, d1-7, '20um', 'color', 'w', ...
+                    %     'fontsize', round(20/pixel_size/d2*75), 'fontweight', 'bold');
+                end
             end
         end
         
@@ -680,10 +582,10 @@ classdef MF3D < handle
             results.C_raw = obj.C_raw(ind, :);
             results.C = obj.C(ind, :);
             results.S = obj.S(ind, :);
-            results.labels = obj.labels(ind, :); 
+            results.labels = obj.labels(ind, :);
             tmp_ids = cell2mat(obj.match_status.em_ids(ind));
             results.EM_IDs = em_ids(tmp_ids, 1);
-            results.match_score = obj.match_status.scores; 
+            results.match_score = obj.match_status.scores;
             results.confidence = obj.match_status.confidence;
             results.deconv_options = obj.options.deconv_options;
             if exist('output_path', 'var')
@@ -762,17 +664,17 @@ classdef MF3D < handle
             end
             if nargin<2 || isempty(ind)
                 AA = A_;
-                CC = obj.C; 
-                CC_raw = obj.C_raw; 
-                confidence = obj.match_status.confidence; 
+                CC = obj.C;
+                CC_raw = obj.C_raw;
+                confidence = obj.match_status.confidence;
             else
                 AA = A_(:, ind);
                 CC = obj.C(ind,:);
-                CC_raw = obj.C_raw(ind,:); 
+                CC_raw = obj.C_raw(ind,:);
                 confidence = obj.match_status.confidence(ind);
             end
-            snr = var(CC, 0, 2) ./var(CC_raw-CC, 0, 2); 
-            snr(isnan(snr)) = 0; 
+            snr = var(CC, 0, 2) ./var(CC_raw-CC, 0, 2);
+            snr(isnan(snr)) = 0;
             
             if ~exist('ratio', 'var')||isempty(ratio)
                 ratio = 0.1;
@@ -783,10 +685,10 @@ classdef MF3D < handle
             d3 = obj.options.d3;
             
             %% normalize the amplitude of each neuron
-            v_norm = max(AA, [], 1); 
+            v_norm = max(AA, [], 1);
             AA = bsxfun(@times, AA, 1./v_norm); %sqrt(sum(AA.^2,1)));
             AA(bsxfun(@lt, AA, max(AA, [], 1)*ratio)) = 0;
-%             AA = bsxfun(@times, AA, sqrt(snr)');
+            %             AA = bsxfun(@times, AA, sqrt(snr)');
             %             AA = bsxfun(@times, AA, (snr.^0.5)');
             [d, K] = size(AA);
             
@@ -798,16 +700,16 @@ classdef MF3D < handle
             
             col0 = col;
             img = zeros(d, 3);
-            img = AA * col; 
+            img = AA * col;
             temp = img/max(img(:))*(2^16);
             temp = uint16(temp);
             if bg_white
                 temp = 2^16-temp;
-            elseif ~isempty(obj.spatial_range) 
+            elseif ~isempty(obj.spatial_range)
                 temp(~obj.spatial_range, :) = 0;
             end
             
-            % rotate and zoomin 
+            % rotate and zoomin
             temp = obj.reshape(temp, 3);
             img = cell(1, d3);
             for m=1:d3
@@ -845,7 +747,7 @@ classdef MF3D < handle
             %% temporal
             figure('papersize', [14, 4], 'name', 'temporal traces');
             tmp_pos0 = get(gcf, 'position');
-            tmp_pos0(1:2) = [800, 0]; 
+            tmp_pos0(1:2) = [800, 0];
             init_fig;
             T = size(obj.C, 2);
             pos = [0.07, 0.64, 0.85, 0.35];
@@ -895,7 +797,7 @@ classdef MF3D < handle
         %% get EM ids
         function em_ids = get_em_ids(obj, ind, em_info)
             if isempty(ind)
-                ind = 1:size(obj.A,2); 
+                ind = 1:size(obj.A,2);
             end
             ind = cell2mat(obj.match_status.em_ids(ind));
             em_ids = em_info(ind, 1);
@@ -964,9 +866,9 @@ classdef MF3D < handle
                     B = bwboundaries(img);
                     for k=1:length(B)
                         if size(B{k},1)<6
-                            break; 
+                            break;
                         end
-                        frame_length = 5; 
+                        frame_length = 5;
                         
                         % for each connected components
                         smoothx = sgolayfilt(B{k}(:, 2), 2, frame_length);
@@ -978,29 +880,29 @@ classdef MF3D < handle
             end
         end
         
-        %% rotate image and zoom in 
+        %% rotate image and zoom in
         function img = rotate_zoomin(obj, img)
-            img = obj.reshape(img, 3); 
+            img = obj.reshape(img, 3);
             ind_nnz = obj.reshape(obj.spatial_range, 3);
             [rot_angle, crange, rrange] = find_rotation(ind_nnz);
             img = imrotate(img, rot_angle);
             img = img(rrange(1):rrange(2), crange(1):crange(2), :, :);
         end
         
-        %% compute tuning curves for all neurons 
+        %% compute tuning curves for all neurons
         function compute_tuning_curve(obj, stimuli)%, sig)
             bins_nan = isnan(stimuli);
             ori = stimuli(~bins_nan);
             
             x = reshape(unique(ori), [], 1);
-            n = hist(ori, x); 
-            y = bsxfun(@eq, x, reshape(ori, 1, [])) * obj.S(:, ~bins_nan)'; 
-            y = bsxfun(@times, y, reshape(1./n, [], 1)); 
-            y(:, sum(y)==0) = 1; 
+            n = hist(ori, x);
+            y = bsxfun(@eq, x, reshape(ori, 1, [])) * obj.S(:, ~bins_nan)';
+            y = bsxfun(@times, y, reshape(1./n, [], 1));
+            y(:, sum(y)==0) = 1;
             y = bsxfun(@times, y, 1./sum(y, 1));
             
-            obj.tuning_curve = struct('x', x, 'y', y); 
-        end 
+            obj.tuning_curve = struct('x', x, 'y', y);
+        end
         
         %% bootstrap tuning curves
         function boostrap_tuning_curve(obj, shuffle)
@@ -1013,13 +915,13 @@ classdef MF3D < handle
             if ~exist('shuffle', 'var') || isempty(shuffle)
                 shuffle = [];
             end
-            tc.shuffle = shuffle; 
+            tc.shuffle = shuffle;
             tc.yfit = zeros(size(tc.y));
             tc.pars = zeros(5, K);
             tc.rss = zeros(1, K);
             tc.pvals = zeros(1, K);
             for m=1:K
-                fprintf('|'); 
+                fprintf('|');
             end
             fprintf('\n');
             for m=1:K
@@ -1035,64 +937,99 @@ classdef MF3D < handle
             fprintf('\n');
             obj.tuning_curve = tc;
         end
-        %% post process spatial shapes 
+        %% post process spatial shapes
         function post_process_spatial(obj, with_threshold)
             if exist('with_threshold', 'var') && with_threshold
-                % compute residual 
-                sn = std(obj.compute_residual(), 0, 2); 
+                % compute residual
+                sn = std(obj.compute_residual(), 0, 2);
                 thresh = sn * (2./sqrt(sum(obj.C.^2, 2)'));
-                obj.A(obj.A<thresh) = 0; 
+                obj.A(obj.A<thresh) = 0;
             end
-        
-        
+            
+            
             K = size(obj.A, 2);
             for m=1:K
-                % keep pixels connecting to the spatial mask 
+                % keep pixels connecting to the spatial mask
                 ai = obj.reshape(obj.A(:, m), 3);
                 ind = obj.reshape(obj.A_mask(:, m)>0, 3);
                 for n=1:3
                     ind = (imdilate(ind, strel('square', 2)).*ai>0);
                 end
                 
-                % remove isolated pixels 
-                ind = (imfilter(double(ind), ones(3,3)) > 1); 
-                obj.A(:, m) = ai(:).*ind(:); 
+                % remove isolated pixels
+                ind = (imfilter(double(ind), ones(3,3)) > 1);
+                obj.A(:, m) = ai(:).*ind(:);
             end
         end
         
-        %% merge repeated extraction 
+        %% construct in & out area
+        [ind_in, ind_out] = construct_in_out(obj, ai_em);
+        
+        %% match neurons with the EM components that has the largest matching score 
+        function n_corrections = rematch(obj, Aem, segment_ids, min_rank)
+            if iscell(Aem)
+               Aem = cell2mat(Aem); 
+               segment_ids = cell2mat(segment_ids); 
+            end
+            if ~exist('min_rank', 'var') || isempty(min_rank)  % only rematch components whose EM match is not the top min_rank candidates
+                min_rank = 2; 
+            end 
+            % find the mismatches 
+            confidence = obj.match_status.confidence; 
+            ind = find(confidence < 1);
+            k_mismatch = length(ind); 
+            
+            % match it with the best EM component
+            n_corrections = 0; 
+            for k=1:k_mismatch 
+                cell_id = ind(k); 
+                [tmp_scores, idx_sort] = sort(obj.scores(cell_id,:), 'descend');
+                if confidence(cell_id) >= tmp_scores(1) / tmp_scores(min_rank) 
+                    continue; 
+                end 
+                n_corrections = n_corrections + 1; 
+                obj.match_status.em_ids{cell_id} = segment_ids(idx_sort(1)); 
+                obj.match_status.confidence(cell_id) = tmp_scores(1) / tmp_scores(2); 
+                obj.match_status.scores(cell_id) = tmp_scores(1);
+                obj.A_mask(:, cell_id) = Aem(:, idx_sort(1)); 
+            end 
+        end 
+        %% merge repeated extraction
         function merge_repeats(obj)
-            em_ids = cell2mat(obj.match_status.em_ids); 
-            unique_ids = unique(em_ids); 
-            [tmp_count, unique_ids] = hist(em_ids, unique_ids); 
+            em_ids = cell2mat(obj.match_status.em_ids);
+            em_ids = reshape(em_ids, [], 1); 
+            [unique_ids, ~, ic] = unique(em_ids);
+            tmp_count = accumarray(ic, 1); 
             idx = find(tmp_count>1);    % find EM components that have repeated extraction
             if ~isempty(idx)
                 for m=1:length(idx)
-                    tmp_id = unique_ids(idx(m)); 
+                    tmp_id = unique_ids(idx(m));
                     ind = find(em_ids==tmp_id);
-                    wi = obj.A_mask(:, ind(1)); 
-                    tmp_A = obj.A(:, ind); 
+                    wi = obj.A_mask(:, ind(1));
+                    tmp_A = obj.A(:, ind);
                     tmp_Craw = obj.C_raw(ind, :);
                     temp = sum(tmp_A,1) .*sum(obj.C(ind,:), 2)'; % use the largest neuron as initialization
-                    [~, tmp_ind] = max(temp); 
-                    ai = tmp_A(:, tmp_ind); 
-                    for miter=1:10        
+                    [~, tmp_ind] = max(temp);
+                    ai = tmp_A(:, tmp_ind);
+                    for miter=1:10
                         %% estimate ci
                         ci = ((wi.*ai)'*tmp_A*tmp_Craw) / ((wi.*ai)'*ai);
                         
                         % estimate ai
-                        ai = max(0, tmp_A*(tmp_Craw*ci') / (ci*ci'));  % ai >= 0              
+                        ai = max(0, tmp_A*(tmp_Craw*ci') / (ci*ci'));  % ai >= 0
                     end
-                    obj.A(:, ind(1)) = ai; 
-                    obj.C_raw(ind(1), :) = ci; 
-                    obj.C(ind(1), :) = ci; 
-                    obj.match_status.confidence(ind(2:end)) = 0; 
+                    obj.A(:, ind(1)) = ai;
+                    obj.C_raw(ind(1), :) = ci;
+                    obj.C(ind(1), :) = ci;
+                    obj.match_status.confidence(ind(2:end)) = 0;
                 end
-                ind = find(obj.match_status.confidence==0) ; 
-                obj.delete(ind); 
+                obj.delete(obj.match_status.confidence==0);
             end
             
         end
+        
+        %% run EASE automatically 
+        at_ease(obj, configs); 
     end
 end
 

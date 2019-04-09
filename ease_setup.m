@@ -19,3 +19,5 @@ addpath(genpath(fullfile(EASE_dir, 'packages', 'pipeline', 'matlab')));
 addpath(fullfile(EASE_dir, 'GUI'));
 addpath(fullfile(EASE_dir, 'GUI', 'callbacks'));
 
+%% create a class object 
+ease = EM2P(); 

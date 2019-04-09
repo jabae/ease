@@ -25,13 +25,6 @@ function choose_FOV(obj, show_fov)
 if ~exist('show_fov', 'var')
     show_fov = 'false';
 end
-
-% load EM info
-if isempty(obj.em_info)
-    obj.load_em();
-end
-
-% spatial downsampling between 2p stack and video data
 ssub = obj.dims_stack(1) / obj.dims_video(1);
 
 % check whether the FOV has been selected.
@@ -39,6 +32,14 @@ if ~isempty(obj.FOV)
     % if selected already, skip
     fprintf('The FOV has been chosen. \n Please set ease.FOV = [] if you want to choose FOV again.\n\n ');
 else
+    
+    % load EM info
+    %     if isempty(obj.em_info)
+    %         obj.load_em();
+    %     end
+    
+    % spatial downsampling between 2p stack and video data
+    
     %% crop a rectangle area to include all EM volumes
     em_ranges_all = cell2mat(obj.em_ranges);
     ii0 = max(round(min(em_ranges_all(:,1)/ssub))-obj.extra_margin, 1);
@@ -63,8 +64,8 @@ if show_fov
     FOV_stack_ = obj.FOV_stack;
     
     figure('papersize', [5, 5]);
-    init_fig; 
-    set(gcf, 'defaultaxesfontsize', 15); 
+    init_fig;
+    set(gcf, 'defaultaxesfontsize', 15);
     axes('position', [0.01, 0.01, 0.98, 0.98]);
     fill([1, obj.dims_stack(1), obj.dims_stack(1), 1, 1], ...
         [1, 1, obj.dims_stack(2), obj.dims_stack(2), 1], ones(1,3)*0.8);
