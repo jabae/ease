@@ -7,8 +7,8 @@ function construct_Aem(obj)
 %% output
 
 %% create a folder for storing Aem
-dir_em = fullfile(obj.output_folder, sprintf('segmentation_%d', ...
-    obj.em_segmentation));
+dir_em = fullfile(obj.output_folder, sprintf('segmentation_%d_zblur_%d', ...
+    obj.em_segmentation, obj.em_zblur));
 if ~exist(dir_em, 'dir')
     mkdir(dir_em);
 else
@@ -24,8 +24,10 @@ end
 
 %% order neurons and divide neurons into multiple groups.
 min_pixel_number = 5; 
-n_voxels = fetchn(obj.rel_footprints & ...
-    sprintf('segmentation=%d', obj.em_segmentation),'n_voxels');  % fetch number of voxels
+rel0 = obj.rel_footprints & ...
+    sprintf('segmentation=%d', obj.em_segmentation) & ...
+    sprintf('zblur=%d', obj.em_zblur); 
+n_voxels = rel0.fetchn('n_voxels');  % fetch number of voxels
 n_voxels(n_voxels<min_pixel_number) = []; 
 n_voxels = sort(n_voxels, 'descend');
 Kem = length(n_voxels);
@@ -33,7 +35,7 @@ Kem = length(n_voxels);
 % find the break points to split data
 sum_voxels = cumsum(n_voxels);
 total_voxels = sum_voxels(end);
-batch_size = 2*10^7;
+batch_size = 10^7;
 break_points = batch_size:batch_size:total_voxels;
 nbatch = length(break_points)+1;
 indices = ones(nbatch, 2);
@@ -62,12 +64,9 @@ for mbatch=1:nbatch
     
     % select the data
     if mbatch==1
-        rel = obj.rel_footprints & ...
-            sprintf('segmentation=%d', obj.em_segmentation) & ...
-            sprintf('n_voxels>=%d', bp_voxels(1));
+        rel = rel0 & sprintf('n_voxels>=%d', bp_voxels(1));
     else
-        rel = obj.rel_footprints & ...
-            sprintf('segmentation=%d', obj.em_segmentation) & ...
+        rel = rel0 & ...
             sprintf('n_voxels<%d', bp_voxels(mbatch-1)) & ...
             sprintf('n_voxels>=%d', bp_voxels(mbatch));
     end
@@ -113,6 +112,9 @@ fprintf('The footprints of all EM segments were projected & aligned onto the sca
 
 %% save the spatial range
 em_volume = reshape(em_volume, [], obj.num_scans);
+
+% run an morphological erosion to update em_volume 
+
 file_name = fullfile(dir_em, 'em_volume.mat');
 save(file_name, 'em_volume', '-v7.3');
 

@@ -19,32 +19,16 @@ if ~exist('weight_em', 'var') || isempty(weight_em)
     weight_em = 'false';
 end
 if ~exist('preprocess_Y', 'var') || isempty(preprocess_Y)
-    preprocess_Y = true; 
+    preprocess_Y = obj.options.pre_process_data; 
 end 
 
 %% pre-process Y 
-Y = obj.reshape(Y,1);   % reshape the data to a matrix
 if preprocess_Y
-    % select frames to be analyzed
-    if isempty(obj.frame_range)
-        Y = double(Y);
-    else
-        t0 = obj.frame_range(1);
-        t1 = obj.frame_range(2);
-        Y = double(Y(:, t0:t1));
-    end
-    
-    % normalize data
-    if obj.options.normalize_data
-        sn = obj.reshape(obj.P.sn, 1);
-        Y = bsxfun(@times, Y, 1./sn);
-    end
-    
-    % remove all pixels outside of the EM volume
-    if ~isempty(obj.spatial_range)
-        Y(~obj.spatial_range, :) = 0; % remove pixels outside of the EM volume
-    end
+    Y = obj.preprocess(Y); 
+else
+    Y = obj.reshape(Y,1);   % reshape the data to a matrix
 end
+
 %% get the spatial range
 Ymean = mean(Y, 2);
 Y = Y - obj.reconstruct_background();
@@ -52,7 +36,7 @@ Y = Y - obj.reconstruct_background();
 %% initialization
 A = obj.A;
 if weight_em
-    A_em = obj.A_mask;
+    A_em = obj.A_em;
 else
     A_em = ones(size(A));
 end

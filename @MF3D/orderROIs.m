@@ -26,9 +26,9 @@ if ischar(srt)
             l3l2 = skewness(obj.C, 0, 2);
             [~, srt] = sort(l3l2, 'descend');
         case 'l3'
-            C_ = bsxfun(@minus, obj.C_raw, mean(obj.C_raw,2)); 
-            l3 = sum(obj.A.^3,1) .*sum(C_.^3, 2)'; 
-            [~, srt] = sort(l3, 'descend'); 
+            C_ = bsxfun(@minus, obj.C_raw, mean(obj.C_raw,2));
+            l3 = sum(obj.A.^3,1) .*sum(C_.^3, 2)';
+            [~, srt] = sort(l3, 'descend');
         case 'temporal_cluster'
             obj.orderROIs('pnr');
             dd = pdist(obj.C_raw, 'cosine');
@@ -55,28 +55,28 @@ if ischar(srt)
             [~, srt] = sort(snrs, 'descend');
     end
     
-   
-    obj.A = obj.A(:, srt);
-    obj.C = obj.C(srt, :);
-    
-    try
-        obj.A_mask = obj.A_mask(:, srt);
-        obj.C_raw = obj.C_raw(srt,:);
-        obj.S = obj.S(srt, :);
-        obj.ids = obj.ids(srt);
-        obj.labels = obj.labels(srt);
-        obj.match_status.status = obj.match_status.status(srt);
-        obj.match_status.em_ids = obj.match_status.em_ids(srt);
-        if ~isempty(obj.scores)
-            obj.scores = obj.scores(srt, :);
-        end
-        if ~isempty(obj.match_status.confidence)
-            obj.match_status.confidence = obj.match_status.confidence(srt);
-        end
-        if ~isempty(obj.match_status.confidence)
-            obj.match_status.scores = obj.match_status.scores(srt);
-        end
-        obj.A_corr = obj.A_corr(:, srt);
-        
+end
+obj.A = obj.A(:, srt);
+obj.C = obj.C(srt, :);
+
+try
+    obj.A_em = obj.A_em(:, srt);
+    obj.C_raw = obj.C_raw(srt,:);
+    obj.S = obj.S(srt, :);
+    obj.ids = obj.ids(srt);
+    obj.labels = obj.labels(srt);
+    obj.match_status.status = obj.match_status.status(srt);
+    obj.match_status.em_ids = obj.match_status.em_ids(srt);
+    if ~isempty(obj.scores)
+        obj.scores = obj.scores(srt, :);
     end
+    if ~isempty(obj.match_status.confidence)
+        obj.match_status.confidence = obj.match_status.confidence(srt);
+    end
+    if ~isempty(obj.match_status.confidence)
+        obj.match_status.scores = obj.match_status.scores(srt);
+    end
+    obj.A_corr = obj.A_corr(:, srt);
+    
+end
 end

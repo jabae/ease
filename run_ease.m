@@ -2,14 +2,6 @@ if ~exist('ease', 'var')
     fi.usepkg('ease'); 
 end 
 
-%% load packages
-fi.usepkg({'yaml', ... % YAML matlab
-    'utils', ... % export matlab
-    'idl', ... % ImagingDataLoader
-    'oasis', ... % OASIS_matlab
-    'datajoint',... % use datajoint 
-    }); 
-
 %% determine project folder, dataset and database
 ease.connect_database();
 ease.select_data();
@@ -22,7 +14,7 @@ show_fov = false;
 ease.choose_FOV(show_fov);
 
 %% crop and align the video data and the stack data 
-ease.load_stack();      % stack data
+% ease.load_stack();      % stack data
 ease.load_video();      % video data
 
 ease.rough_registration_video();  % rough registration 

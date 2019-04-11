@@ -6,8 +6,8 @@ if ~exist('mscan','var')
 end
 
 %% determine number of batches 
-dir_em = fullfile(obj.output_folder, sprintf('segmentation_%d', ...
-    obj.em_segmentation));
+dir_em = fullfile(obj.output_folder, sprintf('segmentation_%d_zblur_%d', ...
+    obj.em_segmentation, obj.em_zblur));
 
 if ~exist(dir_em, 'dir')
     % construct Aem for each scan

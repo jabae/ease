@@ -3,6 +3,7 @@ fi.usepkg({'yaml', ...  % load YAML files
     'utils',...         % matlab util functions 
     'idl', ...          % easy access to scientific imaging data 
     'oasis' ...        % deconvolve and denoise temporal activity 
+    'datajoint', ...    % use datajoint 
     }); 
 
 %% add path

@@ -81,7 +81,11 @@ end
 neuron = MF3D('d1', obj.d1, 'd2', obj.d2, 'd3', obj.d3,...
     'se', strel(ones(3,3,3)), 'search_method', 'dilate');
 neuron.Fs = obj.video_Fs;
-neuron.spatial_range = obj.em_volume(:, mscan);
+
+% EM volume 
+img = neuron.reshape(obj.em_volume(:, mscan), 3); 
+img = imerode(img, strel('disk', 1)); 
+neuron.spatial_range = neuron.reshape(img, 1);
 neuron.options.normalize_data  = obj.normalize_data; 
 neuron.options.deconv_options = struct('type', 'ar1', ... % model of the calcium traces. {'ar1', 'ar2'}
     'method', 'foopsi', ... % method for running deconvolution {'foopsi', 'constrained', 'thresholded'}

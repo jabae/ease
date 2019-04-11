@@ -3,7 +3,8 @@ classdef MF3D < handle
     properties
         % spatial
         A;          % spatial components of neurons
-        A_mask;     % spatial support to neuron A.
+        A_em;       % spatial footprints of the corresponding EM components 
+%         A_em;     % spatial mask for constraining the neuron footprints
         A_corr;     % correlation betwen the raw video and C
         % temporal
         C;          % temporal components of neurons
@@ -125,7 +126,7 @@ classdef MF3D < handle
                 obj.scores(ind, :) = [];
             end
             obj.A(:, ind) = [];
-            obj.A_mask(:, ind) = [];
+            obj.A_em(:, ind) = [];
             if ~isempty(obj.A_corr)
                 try  obj.A_corr(:, ind) = []; catch;  end
             end
@@ -294,7 +295,7 @@ classdef MF3D < handle
             A_ = obj.A;
             A_(em_mask, :) = [];
             A_(A_<=0) = 0;
-            P_ = obj.A; %obj.A_mask .* tmpA_corr;
+            P_ = obj.A; %obj.A_em .* tmpA_corr;
             P_(em_mask, :) = [];
             P_sum = sum(P_, 1);
             P_std = sqrt(sum(P_.^2, 1) - (P_sum.^2/n));
@@ -319,7 +320,7 @@ classdef MF3D < handle
         
         %% evaluate matching performance
         confidence = evaluate_matching_confidence(obj, Yr, Aem, segment_ids);
-  
+        
         %% initialization given EM masks
         ind_voxels_em = initialize_em(obj, Aem, Y, options, black_list, white_list);
         %% initialization given EM masks
@@ -417,8 +418,8 @@ classdef MF3D < handle
         end
         
         %% order ROIs
-        [srt] = orderROIs(obj, srt); 
-       
+        [srt] = orderROIs(obj, srt);
+        
         %% normalize data
         function [Y, Y_sn] = normalize_data(obj, Y, update_var)
             Y = double(obj.reshape(Y,1));
@@ -578,7 +579,7 @@ classdef MF3D < handle
         function results = export_results(obj, em_ids, output_path)
             ind = find(obj.match_status.status==1);
             results.A = obj.reshape(obj.A(:, ind), 3);
-            results.A_mask = obj.reshape(obj.A_mask(:, ind), 3);
+            results.A_em = obj.reshape(obj.A_em(:, ind), 3);
             results.C_raw = obj.C_raw(ind, :);
             results.C = obj.C(ind, :);
             results.S = obj.S(ind, :);
@@ -623,7 +624,7 @@ classdef MF3D < handle
         %% compress results
         function compress(obj, k_score)
             obj.A = sparse(obj.A);
-            obj.A_mask = sparse(obj.A_mask);
+            obj.A_em = sparse(obj.A_em);
             obj.S = sparse(obj.S);
             [K_2p, K_em] = size(obj.scores);
             if ~exist('k_score', 'var') || isempty(k_score)
@@ -658,7 +659,7 @@ classdef MF3D < handle
                 use_em = false;
             end
             if use_em
-                A_ = obj.A_mask;
+                A_ = obj.A_em;
             else
                 A_ = obj.A;
             end
@@ -737,11 +738,11 @@ classdef MF3D < handle
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_A_corr.pdf', ind_pair(1), ind_pair(2)));
             end
-            img_A_mask = obj.overlap_neurons(ind_pair, 'A_mask');
-            obj.showImage(img_A_mask);
+            img_A_em = obj.overlap_neurons(ind_pair, 'A_em');
+            obj.showImage(img_A_em);
             set(gcf, 'name', 'EM footprints', 'position', tmp_pos0+[2*tmp_pos0(3),0, 0 0]);
             if save_figs
-                saveas(gcf, sprintf('pair_%d_%d_A_mask.pdf', ind_pair(1), ind_pair(2)));
+                saveas(gcf, sprintf('pair_%d_%d_A_em.pdf', ind_pair(1), ind_pair(2)));
             end
             
             %% temporal
@@ -849,9 +850,9 @@ classdef MF3D < handle
         %% extract neuron boundaries
         function em_contours = find_em_contours(obj, ind)
             if ~exist('ind', 'var') || isempty(ind)
-                A_ = obj.A_mask;
+                A_ = obj.A_em;
             else
-                A_ = obj.A_mask(:, ind);
+                A_ = obj.A_em(:, ind);
             end
             K = size(A_, 2);
             
@@ -881,10 +882,19 @@ classdef MF3D < handle
         end
         
         %% rotate image and zoom in
-        function img = rotate_zoomin(obj, img)
+        function [img, rot_info] = rotate_zoomin(obj, img, rot_info)
             img = obj.reshape(img, 3);
-            ind_nnz = obj.reshape(obj.spatial_range, 3);
-            [rot_angle, crange, rrange] = find_rotation(ind_nnz);
+            if exist('rot_info', 'var')
+                rot_angle = rot_info.rot_angle;
+                crange = rot_info.crange;
+                rrange = rot_info.rrange;
+            else
+                ind_nnz = obj.reshape(obj.spatial_range, 3);
+                [rot_angle, crange, rrange] = find_rotation(ind_nnz);
+                rot_info = struct('rot_angle', rot_angle, ...
+                    'crange', crange, ...
+                    'rrange', rrange);
+            end
             img = imrotate(img, rot_angle);
             img = img(rrange(1):rrange(2), crange(1):crange(2), :, :);
         end
@@ -951,7 +961,7 @@ classdef MF3D < handle
             for m=1:K
                 % keep pixels connecting to the spatial mask
                 ai = obj.reshape(obj.A(:, m), 3);
-                ind = obj.reshape(obj.A_mask(:, m)>0, 3);
+                ind = obj.reshape(obj.A_em(:, m)>0, 3);
                 for n=1:3
                     ind = (imdilate(ind, strel('square', 2)).*ai>0);
                 end
@@ -965,47 +975,47 @@ classdef MF3D < handle
         %% construct in & out area
         [ind_in, ind_out] = construct_in_out(obj, ai_em);
         
-        %% match neurons with the EM components that has the largest matching score 
+        %% match neurons with the EM components that has the largest matching score
         function n_corrections = rematch(obj, Aem, segment_ids, min_rank)
             if iscell(Aem)
-               Aem = cell2mat(Aem); 
-               segment_ids = cell2mat(segment_ids); 
+                Aem = cell2mat(Aem);
+                segment_ids = cell2mat(segment_ids);
             end
             if ~exist('min_rank', 'var') || isempty(min_rank)  % only rematch components whose EM match is not the top min_rank candidates
-                min_rank = 2; 
-            end 
-            % find the mismatches 
-            confidence = obj.match_status.confidence; 
+                min_rank = 2;
+            end
+            % find the mismatches
+            confidence = obj.match_status.confidence;
             ind = find(confidence < 1);
-            k_mismatch = length(ind); 
+            k_mismatch = length(ind);
             
             % match it with the best EM component
-            n_corrections = 0; 
-            for k=1:k_mismatch 
-                cell_id = ind(k); 
+            n_corrections = 0;
+            for k=1:k_mismatch
+                cell_id = ind(k);
                 [tmp_scores, idx_sort] = sort(obj.scores(cell_id,:), 'descend');
-                if confidence(cell_id) >= tmp_scores(1) / tmp_scores(min_rank) 
-                    continue; 
-                end 
-                n_corrections = n_corrections + 1; 
-                obj.match_status.em_ids{cell_id} = segment_ids(idx_sort(1)); 
-                obj.match_status.confidence(cell_id) = tmp_scores(1) / tmp_scores(2); 
+                if confidence(cell_id) >= tmp_scores(1) / tmp_scores(min_rank)
+                    continue;
+                end
+                n_corrections = n_corrections + 1;
+                obj.match_status.em_ids{cell_id} = segment_ids(idx_sort(1));
+                obj.match_status.confidence(cell_id) = tmp_scores(1) / tmp_scores(2);
                 obj.match_status.scores(cell_id) = tmp_scores(1);
-                obj.A_mask(:, cell_id) = Aem(:, idx_sort(1)); 
-            end 
-        end 
+                obj.A_em(:, cell_id) = Aem(:, idx_sort(1));
+            end
+        end
         %% merge repeated extraction
         function merge_repeats(obj)
             em_ids = cell2mat(obj.match_status.em_ids);
-            em_ids = reshape(em_ids, [], 1); 
+            em_ids = reshape(em_ids, [], 1);
             [unique_ids, ~, ic] = unique(em_ids);
-            tmp_count = accumarray(ic, 1); 
+            tmp_count = accumarray(ic, 1);
             idx = find(tmp_count>1);    % find EM components that have repeated extraction
             if ~isempty(idx)
                 for m=1:length(idx)
                     tmp_id = unique_ids(idx(m));
                     ind = find(em_ids==tmp_id);
-                    wi = obj.A_mask(:, ind(1));
+                    wi = obj.A_em(:, ind(1));
                     tmp_A = obj.A(:, ind);
                     tmp_Craw = obj.C_raw(ind, :);
                     temp = sum(tmp_A,1) .*sum(obj.C(ind,:), 2)'; % use the largest neuron as initialization
@@ -1028,8 +1038,8 @@ classdef MF3D < handle
             
         end
         
-        %% run EASE automatically 
-        at_ease(obj, configs); 
+        %% run EASE automatically
+        at_ease(obj, configs);
     end
 end
 

@@ -1,6 +1,6 @@
 % to confirm whether you want to clear the old results 
 if ease.options_init.clear_results
-   temp = input('do you really want to clear existing results?');  
+   temp = input('do you really want to clear existing results?', 's');  
 end
 if ~strcmpi(temp, 'y')
     ease.options_init.clear_results = false; 

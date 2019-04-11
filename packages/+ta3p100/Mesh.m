@@ -1,7 +1,6 @@
 %{
 # Pinky100 Mesh structures
 -> ta3p100.Segment
--> ta3p100.Segment
 ---
 n_vertices                  : bigint                        # number of vertices in this mesh
 n_triangles                 : bigint                        # number of triangles in this mesh

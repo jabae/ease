@@ -1,4 +1,4 @@
-function visualize_em(obj, em_id, new_figure)
+function visualize_em_mesh(obj, em_id, new_figure, mesh_color)
 %% visualize the mesh version of 1 EM segment 
 %{
 %}
@@ -8,6 +8,7 @@ function visualize_em(obj, em_id, new_figure)
 	obj: type; description
 	em_id: UINT64; EM ID
 	new_figure: boolean; create a new figure (new_figure=true) or not
+    mesh_color: [r, g, b] or char
 %}
 
 %% outputs
@@ -29,7 +30,9 @@ if ~exist('new_figure', 'var') || isempty(new_figure) || new_figure
 else
     hold on; 
 end
-
+if ~exist('mesh_color', 'var')
+    mesh_color = [1, 0.7, 0]; 
+end
 % fetch EM meshes
 [vertices, faces] = fetchn(obj.rel_mesh & ...
     sprintf('segmentation=%d', obj.em_segmentation) & ...
@@ -45,7 +48,7 @@ for m=1:length(faces)
     trisurf(faces{m}+1, vert(:,1),...
         obj.range_2p(2)-vert(:,2), ...
         obj.range_2p(3)-vert(:,3), ...
-        'edgecolor', 'none', 'facecolor', [1, 0.7, 0]);       hold on;
+        'edgecolor', 'none', 'facecolor', mesh_color);       hold on;
 end
 xlabel('X (um)'); 
 ylabel('Y (um)'); 

@@ -24,7 +24,7 @@ function visualize_em_footprints(obj, em_id, new_figure)
 
 
 %%
-if ~exist('new_figure', 'var') || isempty(new_figure)
+if ~exist('new_figure', 'var') || isempty(new_figure) || new_figure
     figure;
 else
     hold on; 

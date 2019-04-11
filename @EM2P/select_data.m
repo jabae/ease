@@ -128,3 +128,7 @@ else
     obj.em_segmentation = temp(1); 
 end 
 obj.matfile_em = sprintf('em_%d.mat', obj.em_segmentation); 
+
+%% update transformation info
+obj.transformation = []; 
+obj.get_transformation(); 

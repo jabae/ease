@@ -96,7 +96,7 @@ Y = bsxfun(@minus, Y, mean(Y, 2));
 if clear_results || isempty(obj.A)
     K_pre = 0;
     obj.A = zeros(d, K_new);
-    obj.A_mask = zeros(d, K_new);
+    obj.A_em = zeros(d, K_new);
     obj.C = zeros(K_new, T);
     obj.C_raw = zeros(K_new, T);
     obj.S = zeros(K_new, T);
@@ -109,7 +109,7 @@ if clear_results || isempty(obj.A)
 else
     K_pre = size(obj.A, 2);     % number of existing neurons
     obj.A = [obj.A, zeros(d, K_new)];
-    obj.A_mask = [obj.A_mask, zeros(d, K_new)];
+    obj.A_em = [obj.A_em, zeros(d, K_new)];
     obj.C = [obj.C; zeros(K_new, T)];
     obj.C_raw = [obj.C_raw; zeros(K_new, T)];
     obj.S = [obj.S; zeros(K_new, T)];
@@ -401,7 +401,7 @@ while (k_new < K_new+K_pre) && (k_tried < K_new*5)
     obj.C_raw(k_new,:) = ci_new_raw(:);
     obj.A(:, k_new) = ai_new(:);
     obj.C(k_new, :) = ci_new(:);
-    obj.A_mask(:, k_new) = ai(:);
+    obj.A_em(:, k_new) = ai(:);
     obj.ids(k_new) = segment_ids(ind_max);
     obj.match_status.status(k_new) = 1;
     obj.match_status.confidence(k_new) = 0;
@@ -451,4 +451,4 @@ while (k_new < K_new+K_pre) && (k_tried < K_new*5)
 end
 
 delete('temp_C.bin'); 
-obj.delete(find(obj.match_status.status==0)); 
+obj.delete(obj.match_status.status==0); 

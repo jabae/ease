@@ -49,8 +49,8 @@ classdef EM2P < handle
         denoised_folder = 'cropped_denoised_video'; % folder of the denoising results for the cropped area
         raw_folder = 'cropped_raw_video';     % folder of the raw data of the cropped area
         use_denoise = false; % use the denoised data for running CNMF
-        normalize_data = true; % normalize data or not 
-        summary_images = []; 
+        normalize_data = true; % normalize data or not
+        summary_images = [];
         
         % mat file for storing all 2p stack data
         matfile_stack = 'stack_2p.mat';
@@ -96,7 +96,7 @@ classdef EM2P < handle
         em_variables = [];
         em_info = [];
         em_ranges = [];
-        em_volume = [];     % binary variable to indicate whether a pixel is within the EM volume or not. 
+        em_volume = [];     % binary variable to indicate whether a pixel is within the EM volume or not.
         K_em = 0;
         em_shifts = [];     % shifts for EM volumes
         % pre-load EM data for faster speed. (default: true)
@@ -120,7 +120,7 @@ classdef EM2P < handle
         dj_connected = false;
         
         % datajoint
-        dj_name = []; 
+        dj_name = [];
         rel_mesh = [];
         rel_voxels = [];
         rel_footprints = [];
@@ -149,35 +149,60 @@ classdef EM2P < handle
             % determine project folder
             if isempty(obj.dir_project)
                 tmp_file = fullfile(fi.locate('ease', true), '.projects.mat');
-                load(tmp_file, 'projects');
+                if exist(tmp_file, 'file')
+                    load(tmp_file, 'projects');
+                else
+                    projects = {};
+                end
                 if isempty(projects)
                     obj.init_project();
-                elseif length(projects)==1 && ~start_new_project
+                elseif length(projects)==1&& exist(projects{1}, 'dir') && ~start_new_project
                     obj.dir_project = projects{1};
                     fprintf('project folder: %s\n', projects{1});
                 else
                     fprintf('there are following projects: \n');
-                    fprintf('--0: create a new one\n');
+                    
+                    n_projects = length(projects);
                     for m=1:length(projects)
                         fprintf('--%d: %s\n', m, projects{m});
                     end
-                    tmp_k = input('\nchoose: ');
-                    try
-                        obj.dir_project = projects{tmp_k};
-                    catch
-                        obj.init_project();
+                    fprintf('\n***************** GUIDE *****************\n');
+                    fprintf('type  0: create a new one\n');
+                    fprintf('type  k: choose the k-th project shown above\n');
+                    fprintf('type -k: delete the k-th project shown above\n');
+                    fprintf('type k+1: select an existing project folder\n');
+                    fprintf('*****************  END  *****************\n');
+                    
+                    while true
+                        tmp_k = input('\nchoose: ');
+                        if tmp_k==0
+                            obj.init_project();
+                            break;
+                        elseif tmp_k > n_projects
+                            [dir_name] = uigetdir();
+                            projects{n_projects+1} = dir_name;
+                            obj.dir_project = dir_name;
+                            break;
+                        elseif tmp_k>0  %select a project
+                            obj.dir_project = projects{tmp_k};
+                            break;
+                        elseif abs(tmp_k)<= n_projects  % delete a project
+                            projects{abs(tmp_k)} = [];
+                        end
                     end
+                    projects(cellfun(@isempty, projects)) = [];
+                    save(tmp_file, 'projects');
                 end
             end
             
             % load databases and datasets
             temp = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
             if isempty(obj.datasets_list)
-                obj.datasets_list = temp.datasets_list; 
+                obj.datasets_list = temp.datasets_list;
             else
                 obj.datasets_list = union(obj.datasets_list, temp.datasets_list);
             end
-            if isempty(obj.databases_list) 
+            if isempty(obj.databases_list)
                 obj.databases_list = temp.databases_list;
             else
                 obj.databases_list = union(obj.databases_list, temp.databases_list);
@@ -224,8 +249,8 @@ classdef EM2P < handle
         %% load functional video data
         load_video(obj);
         
-        %% load the video data 
-        Y = load_Y(obj, mscan, mblock); 
+        %% load the video data
+        Y = load_Y(obj, mscan, mblock);
         
         %% create data loader
         [dl_Yr, dl_Yd] = create_dataloader(obj, scan_id, block_id, T);
@@ -245,8 +270,8 @@ classdef EM2P < handle
         %% get EM masks in a specified scan ID
         Aem = get_Aem_scan(obj, mscan, ssub);
         
-        %% new version of loading Aem 
-        [Aem, segment_ids] = load_Aem(obj, mscan); 
+        %% new version of loading Aem
+        [Aem, segment_ids] = load_Aem(obj, mscan);
         
         %% create/load neuron objects for all video data
         neuron = get_MF3D(obj, create_new);
@@ -294,57 +319,57 @@ classdef EM2P < handle
         connect_database(obj, database_list, dj_username, dj_password)
         
         %% visualize the mesh of one EM segment
-        visualize_em_mesh(obj, em_id, new_figure);
+        visualize_em_mesh(obj, em_id, new_figure, mesh_color);
         
         %% visualize the voxelized version of one EM segment
-        visualize_em_voxels(obj, em_id, new_figure);
+        visualize_em_voxels(obj, em_id, new_figure, voxel_color);
         
         %% collect EM information
         collect_em_info(obj);
         
-        %% visualize EM footprints 
+        %% visualize EM footprints
         visualize_em_footprints(obj, em_id, new_figure)
         
-        %% project EM 
-        project_em(obj, use_parallel); 
+        %% project EM
+        project_em(obj, use_parallel);
         
-        %% add a new dataset 
-        add_dataset(obj); 
+        %% add a new dataset
+        add_dataset(obj);
         
-        %% convert indices from 2p stack to video 
-        [idx_new, dims_new] = convert_idx(obj, idx); 
+        %% convert indices from 2p stack to video
+        [idx_new, dims_new] = convert_idx(obj, idx);
         
-        %% extract EM footprints given a list of EM 
-        [Aem, segments_id, segments_del] = get_em_footprints(obj, em_ids, scan_id); 
-       
-        %% extract video data 
-        Y = get_Y(obj, mscan, mblock); 
+        %% extract EM footprints given a list of EM
+        [Aem, segments_id, segments_del] = get_em_footprints(obj, em_ids, scan_id);
         
-        %% get the EM volume on the scanning planes  
-        spatial_range = get_spatial_range(obj); 
-    
-        %% construct EM footprints on the calcium imaging planes 
-        construct_Aem(obj); 
+        %% extract video data
+        Y = get_Y(obj, mscan, mblock);
         
-        %% add EM components to the white/black list     
+        %% get the EM volume on the scanning planes
+        spatial_range = get_spatial_range(obj);
+        
+        %% construct EM footprints on the calcium imaging planes
+        construct_Aem(obj);
+        
+        %% add EM components to the white/black list
         add2whitelist(obj, segment_ids, reason)
         add2blacklist(obj, segment_ids, reason)
         
-        %% construct a data container 
-        [Y_raw, Y_denoised] = construct_Y(obj); 
+        %% construct a data container
+        [Y_raw, Y_denoised] = construct_Y(obj);
         
-        %% release space for storing the raw video 
-        freespace_Y(obj, mscan, mblock); 
+        %% release space for storing the raw video
+        freespace_Y(obj, mscan, mblock);
         
-        %% close all windows except the main window 
+        %% close all windows except the main window
         function closeall(obj)
             %%
             set(obj.gui.fig_main, 'HandleVisibility', 'off');
             close all;
             set(obj.gui.fig_main, 'HandleVisibility', 'on');
-        end 
+        end
         
-        %% create configurations for running EASE 
+        %% create configurations for running EASE
         function configs = create_running_configs(obj, K_new, K_candidates, nb, min_rank)
             options = obj.options_init;
             niter = length(nb);
@@ -360,18 +385,18 @@ classdef EM2P < handle
                 configs{m} = struct('options_init', options,...
                     'min_rank', min_rank(m), 'nb', nb(m));
             end
-        end 
-        %% load em volume 
+        end
+        %% load em volume
         function get_em_volume(obj)
             
             file_name = fullfile(obj.output_folder, ...
                 sprintf('segmentation_%d', obj.em_segmentation), ...
                 'em_volume.mat');
             if exist(file_name, 'file')
-                temp = load(file_name); 
-                obj.em_volume = temp.em_volume; 
+                temp = load(file_name);
+                obj.em_volume = temp.em_volume;
             else
-                obj.construct_Aem(); 
+                obj.construct_Aem();
             end
         end
     end

@@ -23,10 +23,18 @@ function project_em(obj, use_parallel)
 %% project all EM meshes
 fprintf('project EM voxels onto each 2p scanning plane\n');
 assignin('base', 'options', obj.set_projections_options()); % create a struct variable storing parameters
-if exist('use_parallel', 'var') && (~use_parallel)
-    populate(obj.rel_footprints, sprintf('segmentation=%d', obj.em_segmentation));
+
+% check whether we should add this z value to the database 
+rel = eval(sprintf('%s.Zblur;', obj.dj_name)); 
+temp = fetchn(rel, 'zblur'); 
+if ~any(temp==obj.em_zblur)
+    key = struct('zblur', obj.em_zblur); 
+    rel.insert(key); 
+end 
+if exist('use_parallel', 'var') && (use_parallel)
+    parpopulate(obj.rel_footprints, sprintf('segmentation=%d and zblur=%d', obj.em_segmentation, obj.em_zblur));
 else
-    parpopulate(obj.rel_footprints, sprintf('segmentation=%d', obj.em_segmentation));
+    populate(obj.rel_footprints, sprintf('segmentation=%d and zblur=%d', obj.em_segmentation, obj.em_zblur));
 end
 
 fprintf('done!\n');
