@@ -6,7 +6,7 @@ EASE is a toolbox for fusing calcium imaging data and densely reconstructed Elec
 **Running environment**
 1. <img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" height="20" /> MATLAB: all computations. The earliest MATLAB version passing my test is R2015a. However, you need versions after R2015b if you have to use DataJoint to load EM meshes. 
 
-2. <img src="https://upload.wikimedia.org/wikipedia/en/6/62/MySQL.svg" height="20"/> MySQL: store data. The other option is to save data into *.mat file directly.
+2. <img src="https://upload.wikimedia.org/wikipedia/en/6/62/MySQL.svg" height="20"/> MySQL: store data. We mainly use MySQL to store EM meshes and other large intermediate results relating to preprocessing EM segments. We can also skip using MySQL if we have EM footprints on each 2P scanning plane.   
 
 **Pakages** 
 
@@ -21,36 +21,16 @@ EASE is a toolbox for fusing calcium imaging data and densely reconstructed Elec
 details of the data information will be explained in the section of [Run EASE](run-ease); 
 
 ## Installation
-1. clone the package (bash environment) 
-```bash 
-git clone --recurse-submodules  https://github.com/zhoupc/ease.git
-```
+1. install [F-image]() and then install EASE with F-image in MATLAB 
+   ```matlab 
+    >> fi.install('ease')
+   ```
+2. [install mysql](https://dev.mysql.com/doc/refman/8.0/en/installing.html) and configure the database. You also need to test your [datajoint](https://docs.datajoint.io/matlab/admin/Admin.html) connection with MySQL
+## Use EASE 
+We described a typical pipeline of running EASE. Please check it [here](./how_to_use.md)
+We also uploaded our running scripts for producing results in our [EASE paper](xxx). Please check it [here](https://github.com/zhoupc/ease_project)
 
-2. setup the path (MATLAB environment)
-```matlab
->> run ease_setup.m
-```
-
-## Run EASE 
-We created a GUI for running EASE. Once we set up the data paths and configurations, just run 
-```matlab 
->> run_ease; 
-```
-Then you can start processing data with the GUI.  Easy-peasy! 
-
-We also provided many scripts for processing data automatically. More details of running EASE will be added soon. 
-
-## Package structure
-* **@EM2P**: define a class object for organzing data, options and high level functions. 
-* **@MF3D**: define a class object (matrix factorization 3D) for running matrix factorization on 3D data. 
-* **+erun**: (Ease run) a collection of scripts for processing data. 
-* **functions**: matlab functions used by the package. 
-* **GUI**:  GUI callbacks and layouts. 
-* **scripts**: a collection of scripts. (I'm going to slowly move all scripts into the folder +erun). 
-* **config_ease.yaml**: an example yaml file for storing configurations 
-* **ease_setup.m**: setup ease. 
-* **run_ease.m**: a demo script 
-
+## References 
 ## Copyright 
 [Pengcheng Zhou](https://zhoupc.github.io) @Columbia University, 2019
 
