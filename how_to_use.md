@@ -52,6 +52,13 @@ test: dataset added. Here are things you need to do:
 	3. add database schema to access ta3test
 ```
 **I. required data**:
+
+0. **EM meshes**: It's saved into a database. By default, it contains at least 3 tables 
+   (1). **Segmentation**: specifies the version of the EM segmentation. there are two columns: segmentation; segmentation_description
+   (2). **Segment**: specify a unique key value for each EM segment. It has two fields: segmentation, segment_id
+   (3) **Mesh**: the meshes for all EM segments. Beside the unique key value from **Segment**, it has the following fields:  n_vertices (bigint), n_triangles (bigint), vertices (longblob) and triangles(longblob).
+ 
+
 1. **stack_2p.mat**: there is a variable stack_2p with a dimension of [d1, d2, d3] to represent the high-resolution 2p stack data. 
 
 2. **functional_data.mat**: info relating to the calcium imaging video data. it has a cell array ([num_scans, num_planes, num_blocks]) of data loaders for each video data: 
