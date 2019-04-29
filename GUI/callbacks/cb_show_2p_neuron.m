@@ -74,11 +74,11 @@ elseif tmp_status.status(cell_id) == 0
 else
     col_status = {[1, 0, 0], ease.gui.color_gray, ease.gui.color_gray, ease.gui.color_gray};
 end
-
-set(ease.gui.btn_em_perfect, 'backgroundcolor', col_status{1});
-set(ease.gui.btn_em_candidate, 'backgroundcolor', col_status{2});
-set(ease.gui.btn_em_zero, 'backgroundcolor', col_status{4});
-set(ease.gui.btn_em_ignore, 'backgroundcolor', col_status{3});
+% 
+% set(ease.gui.btn_em_rematch, 'backgroundcolor', col_status{1});
+% set(ease.gui.btn_em_candidate, 'backgroundcolor', col_status{2});
+% set(ease.gui.btn_em_zero, 'backgroundcolor', col_status{4});
+% set(ease.gui.btn_em_ignore, 'backgroundcolor', col_status{3});
 
 %% run matching neurons
 cb_show_em_neuron;

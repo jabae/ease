@@ -23,12 +23,25 @@ else
 end
 
 %% order neurons and divide neurons into multiple groups.
-min_pixel_number = 5; 
-rel0 = obj.rel_footprints & ...
-    sprintf('segmentation=%d', obj.em_segmentation) & ...
-    sprintf('zblur=%d', obj.em_zblur); 
+min_pixel_number = 0; 
+if isempty(obj.blur_version)
+    obj.set_projections_options(); 
+end
+if strcmpi(obj.data_name, 'pinky40')
+    rel0 = obj.rel_footprints &...
+        (ta3.Mesh & (ta3.VoxelizedMesh & 'n_vertices>2500')) &...
+        sprintf('segmentation=%d', obj.em_segmentation) & ...
+        sprintf('version=%d', obj.blur_version);
+    sprintf('version=%d', obj.blur_version);
+    obj.em_shifts.ii = obj.stack_shifts.ii - 3;
+    obj.em_shifts.jj = obj.stack_shifts.jj - 3;
+else
+    rel0 = obj.rel_footprints & ...
+        sprintf('segmentation=%d', obj.em_segmentation) & ...
+        sprintf('version=%d', obj.blur_version);
+end
 n_voxels = rel0.fetchn('n_voxels');  % fetch number of voxels
-n_voxels(n_voxels<min_pixel_number) = []; 
+n_voxels(n_voxels<min_pixel_number) = [];
 n_voxels = sort(n_voxels, 'descend');
 Kem = length(n_voxels);
 

@@ -1,4 +1,13 @@
-switch neuron.labels(cell_id)
+temp = neuron.labels(cell_id); 
+color_gray = 0.94 * [1, 1, 1]; 
+
+if temp<0  % the neuron has been verified  
+    set(ease.gui.btn_verified, 'backgroundcolor', 'r'); 
+else 
+    set(ease.gui.btn_verified, 'backgroundcolor', color_gray); 
+end 
+
+switch abs(temp)
     case 1
         temp = 'soma'; 
     case 2 
@@ -7,7 +16,6 @@ switch neuron.labels(cell_id)
         temp = 'unknown'; 
 end
 
-color_gray = 0.94 * [1, 1, 1]; 
 if strcmpi(temp, 'soma')
     set(ease.gui.btn_soma, 'backgroundcolor', 'r'); 
 else

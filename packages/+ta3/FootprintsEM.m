@@ -1,7 +1,7 @@
 %{
 # my newest table
 -> ta3.Mesh
--> ta3.Zblur
+-> ta3.Blurs
 -----
 # add additional attributes
 n_voxels: bigint   # number of voxels
@@ -45,7 +45,7 @@ classdef FootprintsEM < dj.Computed
                 key.n_voxels = 0;
                 key.idx_value = [];
             end
-            key.zblur = options.zblur;
+            key.version = options.version;
             self.insert(key)
         end
     end

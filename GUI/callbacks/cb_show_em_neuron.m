@@ -25,7 +25,7 @@ switch tmp_status.status(cell_id)
         col_status = {[1, 0, 0], ease.gui.color_gray, ease.gui.color_gray, ease.gui.color_gray};
         temp = find(segment_ids==tmp_status.em_ids{cell_id}, 1, 'first');
         em_rank = find(em_sort_id==temp);
-        set(ease.gui.btn_em_perfect, 'backgroundcolor', 'red');
+        set(ease.gui.btn_em_rematch, 'backgroundcolor', 'red');
     otherwise
         col_status = {ease.gui.color_gray, ease.gui.color_gray, ease.gui.color_gray, 'red'};
         fprintf('this neuron has is has no match\n');

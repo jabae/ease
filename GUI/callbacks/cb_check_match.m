@@ -65,9 +65,9 @@ switch neuron.match_status.status(cell_id)
         end
     case 1
         if em_id == neuron.match_status.em_ids{cell_id}
-            set(ease.gui.btn_em_perfect, 'backgroundcolor', 'red');
+            set(ease.gui.btn_em_rematch, 'backgroundcolor', 'red');
         else
-            set(ease.gui.btn_em_perfect, 'backgroundcolor', ease.gui.color_gray);
+            set(ease.gui.btn_em_rematch, 'backgroundcolor', ease.gui.color_gray);
         end
     otherwise
         fprintf('this neuron has is has no match\n');

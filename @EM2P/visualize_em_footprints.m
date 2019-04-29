@@ -33,7 +33,8 @@ end
 % fetch EM voxels 
 [idx_value] = fetch1(obj.rel_footprints & ...
     sprintf('segmentation=%d', obj.em_segmentation) & ...
-    sprintf('segment_id=%d', em_id), 'idx_value'); 
+    sprintf('segment_id=%d', em_id) & ...
+    sprintf('version=%d', obj.blur_version), 'idx_value'); 
 [idx_r, idx_c, idx_z] = ind2sub(obj.dims_stack, idx_value(:,1));
 v = idx_value(:, 2); 
 if isempty(v)

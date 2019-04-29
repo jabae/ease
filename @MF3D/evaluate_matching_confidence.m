@@ -11,7 +11,6 @@ n = size(Aem, 1);
 Aem_sum = sum(Aem, 1);
 Aem_std = sqrt(sum(Aem.^2,1) - (Aem_sum.^2/n));
 
-
 %% get residual 
 Yres = obj.compute_residual(Yr); 
 Yres = bsxfun(@minus, Yres, mean(Yres, 2)); 
@@ -21,13 +20,22 @@ var_Yres(var_Yres==0) = inf;
 %% get unconstrained estimation of A  and estimate correlation between each ci & Y
 C_ = obj.C; 
 C_ = bsxfun(@minus, C_, mean(C_, 2)); 
-A_ = obj.A + (Yres*C_')/sum(C_.^2, 2)'; 
+A_ = obj.A + bsxfun(@times, Yres*C_', 1./sum(C_.^2, 2)'); 
 % variance of each neuron 
 var_neurons = var_Yres + bsxfun(@times, obj.A.^2, sum(C_.^2, 2)'); 
 
 obj.A_corr = bsxfun(@times, A_./sqrt(var_neurons), sqrt(sum(C_.^2, 2)')); 
 
 %% compute matching score
+% A_ = obj.A + Yres / C_; %bsxfun(@times, Yres*C_', 1./sum(C_.^2, 2)'); 
+% A_ = obj.A_corr; 
+% % normalize pixel values 
+% d1 = obj.options.d1; 
+% d2 = obj.options.d2; 
+% A_ = reshape(A_, d1, d2, []);
+% temp = stdfilt(A_, ones(11); 
+% % temp(temp<=0) = inf; 
+% A_ = obj.reshape(A_./temp, 1); 
 A_(em_mask, :) = [];
 
 A_sum = sum(A_, 1);
@@ -39,12 +47,11 @@ temp2 = bsxfun(@times, temp2, 1./A_std');
 corr_aipj = bsxfun(@times, temp2, 1./Aem_std);
 
 % explained signal 
-A_(A_<0) = 0; 
-explained_signal = bsxfun(@times, A_, 1./sum(A_,1))' * (Aem>0); 
-% sparsity of pj 
-% sparsity = 
+% A_(A_<0) = 0; 
+% explained_signal = bsxfun(@times, A_, 1./sum(A_,1))' * (Aem>0); 
+explained_signal = bsxfun(@times, A_'*(Aem>0), 1./ sum(A_.*(A_>0), 1)'); 
 
-temp = (explained_signal) .* corr_aipj;
+temp = explained_signal .* corr_aipj;
 % temp =  corr_aipj;
 temp(isnan(temp)) = 0;
 obj.scores = sparse(temp);

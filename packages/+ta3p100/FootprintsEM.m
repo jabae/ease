@@ -1,7 +1,7 @@
 %{
 # my newest table
 -> ta3p100.Segment
--> ta3p100.Zblur
+-> ta3p100.Blurs
 -----
 n_voxels: bigint        # number of voxels 
 idx_value: longblob     # M*2 matrix, [idx, value]  
@@ -44,7 +44,7 @@ classdef FootprintsEM < dj.Computed
                 key.n_voxels = 0;
                 key.idx_value = [];
             end
-            key.zblur = options.zblur;
+            key.version = options.version;
             self.insert(key)
         end
     end

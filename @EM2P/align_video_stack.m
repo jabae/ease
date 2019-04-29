@@ -60,7 +60,7 @@ stack_2p = evalin('base', 'stack_2p');
 
 % images showing the performances of motion correction
 img_match_fov = cell(obj.num_scans, obj.num_slices);
-temp = (rand(20)>0.8);
+temp = (rand(20)>0.5);
 tmp_kernel = temp / sum(temp(:));   % used to normalize pixel values for balancing colors
 
 % show progress bar

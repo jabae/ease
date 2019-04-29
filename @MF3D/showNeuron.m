@@ -30,7 +30,7 @@ img_max = max(ai(:))*0.8;
 vlim = [0, img_max];
 
 [d1, d2, d3] = size(ai);
-ai_em = obj.reshape(obj.A_mask(:, ind), 3);
+ai_em = obj.reshape(obj.A_em(:, ind), 3);
 img_max = max(ai_em(:))*0.8;
 vlim_em = [0, img_max];
 

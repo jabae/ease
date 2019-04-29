@@ -39,6 +39,9 @@ end
 segment_ids = segment_ids(1:mbatch); 
 Aem = Aem(1:mbatch); 
 
+Aem = cell2mat(Aem); 
+segment_ids = cell2mat(segment_ids); 
+
 assignin('base', 'current_scan_id_for_em', mscan); 
 assignin('base', 'Aem', Aem); 
 fprintf('\nDone!\n'); 

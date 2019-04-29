@@ -18,14 +18,8 @@ function [ind_in, ind_out] = construct_in_out(obj, ai_em)
     zhoupc1988@gmail.com
 %}
 
-%% start initialization
-
+%% code 
 ai = obj.reshape(ai_em, 3);
-
-% blur and trim 
-% ai_min = min(ai(ai>0)); 
-% ai = imfilter(ai, fspecial('gaussian', 7, 1));
-% ai(ai<ai_min) = 0; 
 
 % ai_mask = imdilate(ai>0, strel('square', 3)); 
 ai_mask = imdilate(repmat(sum(ai, 3)>0, [1, 1, 3]), strel('disk', 3));

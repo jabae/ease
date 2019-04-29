@@ -124,6 +124,12 @@ classdef EM2P < handle
         rel_mesh = [];
         rel_voxels = [];
         rel_footprints = [];
+        
+        % blur version
+        blur_version = [];
+        
+        % stimuli 
+        conditions = []; 
     end
     
     %% methods
@@ -331,7 +337,7 @@ classdef EM2P < handle
         visualize_em_footprints(obj, em_id, new_figure)
         
         %% project EM
-        project_em(obj, use_parallel);
+        project_em(obj);
         
         %% add a new dataset
         add_dataset(obj);
@@ -370,11 +376,16 @@ classdef EM2P < handle
         end
         
         %% create configurations for running EASE
-        function configs = create_running_configs(obj, K_new, K_candidates, nb, min_rank)
+        function configs = create_running_configs(obj, K_new, K_candidates, nb, min_rank, black_list, white_list)
             options = obj.options_init;
             niter = length(nb);
             configs = cell(niter, 1);
-            
+            if ~exist('black_list', 'var')
+                black_list = []; 
+            end 
+            if ~exist('white_list', 'var') 
+                white_list = []; 
+            end
             % configurations for running EASE
             for m=1:niter
                 options.K_candidate = K_candidates(m);
@@ -383,14 +394,16 @@ classdef EM2P < handle
                     options.clear_results = false;
                 end
                 configs{m} = struct('options_init', options,...
-                    'min_rank', min_rank(m), 'nb', nb(m));
+                    'min_rank', min_rank(m), 'nb', nb(m), ...
+                    'black_list', black_list, 'white_list', white_list);
             end
         end
         %% load em volume
         function get_em_volume(obj)
             
             file_name = fullfile(obj.output_folder, ...
-                sprintf('segmentation_%d', obj.em_segmentation), ...
+                sprintf('segmentation_%d_zblur_%d', ...
+                obj.em_segmentation, obj.em_zblur),  ...
                 'em_volume.mat');
             if exist(file_name, 'file')
                 temp = load(file_name);
@@ -398,6 +411,188 @@ classdef EM2P < handle
             else
                 obj.construct_Aem();
             end
+        end
+        
+        %% load conditions 
+        function conditions = load_stimuli(obj)
+            file_stimuli = fullfile(obj.data_folder, 'conditions.mat');
+            temp = load(file_stimuli);
+            
+            conditions = 2*pi/360*temp.conditions;
+            obj.conditions = conditions; 
+%             xbins = unique(conditions(~isnan(conditions)));
+%             sig = pi/10;
+        end 
+        
+        %% compute tuning curves 
+        function compute_tuning_curves(obj, scan_list, shuffle)
+            if ~exist('shuffle', 'var')
+                shuffle = []; 
+            end 
+            n_list = length(scan_list); 
+            if isempty(obj.conditions)
+                obj.load_stimuli(); 
+            end 
+            for m=1:n_list 
+                obj.scan_id = scan_list(m); 
+                neuron = obj.get_MF3D(); 
+                tmp_stimuli = obj.conditions(obj.scan_id, neuron.frame_range(1):neuron.frame_range(2)); 
+                neuron.compute_tuning_curve(tmp_stimuli); 
+                neuron.boostrap_tuning_curve(shuffle);
+                obj.save_MF3D();
+            end 
+        end 
+        %% process all scans given the configuration 
+        function process_scans(obj, scan_list, configs)
+            n_list = length(scan_list); 
+            for m=1:n_list
+               obj.scan_id = scan_list(m); 
+               neuron = obj.get_MF3D(); 
+               neuron.at_ease(configs); 
+               obj.save_MF3D(); 
+            end
+        end 
+        %% combine results
+        function [results, neurons] = combine_results(obj, scan_list)
+            if ~exist('scan_list', 'var') || isempty(scan_list)
+                scan_list = 1:obj.num_scans;
+            end
+            n_list = length(scan_list);
+            neurons = cell(n_list,1);
+            em_ids = cell(n_list,1);
+            snrs = cell(n_list, 1);
+            pnrs = cell(n_list, 1);
+            confidences = cell(n_list, 1);
+            match_scores = cell(n_list, 1);
+            labels_all = cell(n_list, 1);
+            A_all = cell(n_list, 1);
+            Acorr_all = cell(n_list, 1);
+            Aem_all = cell(n_list, 1);
+            C_all = cell(n_list, 1);
+            Craw_all = cell(n_list, 1);
+            S_all = cell(n_list, 1);
+            tc_y = cell(n_list, 1); 
+            tc_yfit = cell(n_list, 1); 
+            tc_rss = cell(n_list, 1); 
+            tc_pvals = cell(n_list, 1); 
+            tc_pars = cell(n_list, 1); 
+            % load all results
+            for m=1:n_list
+                obj.scan_id = scan_list(m);
+                neuron = obj.get_MF3D(false);  % load results; don't create new
+                neurons{m} = neuron;
+                
+                em_ids{m} = cell2mat(neuron.match_status.em_ids)';
+                confidences{m} = (neuron.match_status.confidence);
+                match_scores{m} = (neuron.match_status.scores);
+                labels_all{m} = neuron.labels;
+                
+                A_all{m} = neuron.A;
+                Acorr_all{m} = neuron.A_corr;
+                Aem_all{m} = neuron.A_em;
+                C_all{m} = neuron.C;
+                Craw_all{m} = neuron.C_raw;
+                S_all{m} = neuron.S;
+                snrs{m}= var(neuron.C, 0, 2)./var(neuron.C_raw-neuron.C, 0, 2);
+                pnrs{m} = max(neuron.C, [], 2) ./ std(neuron.C_raw-neuron.C, 0, 2);
+                
+                % tuning curves 
+                tc = neuron.tuning_curve; 
+                if ~isempty(tc)
+                    tc_bins = tc.x; 
+                    tc_y{m} = tc.y; 
+                    tc_yfit{m} = tc.yfit; 
+                    tc_pars{m} = tc.pars; 
+                    tc_rss{m} = tc.rss; 
+                    tc_pvals{m} = tc.pvals;
+                    npars = size(tc.pars, 1); 
+                end
+            end
+            
+            % organize results by neurons
+            unique_ids = unique(cell2mat(em_ids));
+            K = length(unique_ids);
+            d = size(A_all{1}, 1);
+            T = size(C_all{1}, 2);
+            
+            results.em_ids = unique_ids;
+            results.scan_list = scan_list;
+            results.detected = false(n_list, K);
+            results.confidences = zeros(n_list, K);
+            results.match_scores = zeros(n_list, K);
+            results.labels = zeros(n_list, K);
+            results.snrs = zeros(n_list, K);
+            results.pnrs = zeros(n_list, K);
+            results.A = zeros(d, n_list, K);
+            results.A_corr = zeros(d, n_list, K);
+            results.A_em = zeros(d, n_list, K);
+            results.C = zeros(T,n_list, K);
+            results.Craw = zeros(T, n_list, K);
+            results.S = zeros(T, n_list, K);
+            if exist('tc_bins', 'var')
+                nbins = length(tc_bins);
+                results.bins = tc_bins; 
+                results.y = zeros(nbins, n_list, K); 
+                results.yfit = zeros(nbins, n_list, K); 
+                results.pars = zeros(npars, n_list, K); 
+                results.rss = zeros(n_list, K); 
+                results.pvals = zeros(n_list, K); 
+            end 
+            for m=1:n_list
+                [~, idx] = ismember(em_ids{m}, unique_ids);
+                results.detected(m, idx) = true;
+                results.confidences(m, idx) = confidences{m};
+                results.match_scores(m, idx) = match_scores{m};
+                results.labels(m, idx) = labels_all{m};
+                results.snrs(m, idx) = snrs{m};
+                results.pnrs(m, idx) = pnrs{m};
+                results.A(:, m, idx) = A_all{m};
+                results.A_corr(:, m, idx) = Acorr_all{m};
+                results.A_em(:, m, idx) = Aem_all{m};
+                results.C(:, m, idx) = C_all{m}';
+                results.Craw(:, m, idx) = Craw_all{m}';
+                results.S(:, m, idx) = S_all{m}';
+                
+                if exist('tc_bins', 'var')
+                    results.y(:, m, idx) = tc_y{m}; 
+                    results.yfit(:, m, idx) = tc_yfit{m}; 
+                    results.pars(:, m, idx) = tc_pars{m}; 
+                    results.rss(m, idx) = tc_rss{m}; 
+                    results.pvals(m, idx) = tc_pvals{m}; 
+                end 
+            end
+            
+            % compress results 
+            dims = [obj.d1, obj.d2, obj.d3, n_list]; 
+            results.dims = dims; 
+            d = prod(dims); 
+            results.A = sparse(reshape(results.A, d, K)); 
+            results.A_corr = sparse(reshape(results.A_corr, d, K)); 
+            results.A_em = sparse(reshape(results.A_em, d, K)); 
+            
+        end
+        
+        %% backup results 
+        function backup_results(obj)
+            %% determine the matfile for saving the results
+            FOV_ = obj.FOV;
+            fov_str = sprintf('neurons_%d_%d_%d_%d', FOV_(1), FOV_(2), FOV_(3), FOV_(4)); 
+            matfile_mf3d = fullfile(obj.output_folder, sprintf('%s.mat',fov_str));
+            folder_MF3D = fullfile(obj.output_folder, fov_str);
+            
+            %% 
+            tmp_str = input('backup name: ', 's'); 
+            tmp_folder = fullfile(obj.output_folder, tmp_str); 
+            if ~exist(tmp_folder, 'dir')
+                mkdir(tmp_folder); 
+                copyfile(matfile_mf3d, tmp_folder); 
+                copyfile(folder_MF3D, fullfile(tmp_folder, fov_str)); 
+                            fprintf('The results of the current sources extraction were backed up to the folder\n\t%s\n', tmp_folder);
+            else
+                fprintf('the backup name has been used.\n'); 
+            end
+           
+            
         end
     end
 end

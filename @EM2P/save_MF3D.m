@@ -21,7 +21,7 @@ end
 if mblock>0
     flag_created(mscan, mblock) = true; %#ok<NASGU>
 end
-neuron = evalin('base', 'neuron');
+neuron = evalin('caller', 'neuron');
 neuron.compress();
 if ~exist(folder_MF3D, 'dir')
     mkdir(folder_MF3D); 

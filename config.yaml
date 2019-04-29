@@ -23,7 +23,7 @@ d3: []
 extra_margin: 5.0
 FOV: []
 FOV_stack: []
-align_max_zshift: 8.0
+align_max_zshift: 2.0
 num_scans: 8.0
 num_slices: 3.0
 num_blocks: 3.0

@@ -32,11 +32,12 @@ Ysignal = Y - obj.reconstruct_background();
 d3 = obj.options.d3;
 if with_EM
     masks = zeros(size(obj.A_em));
-    h = fspecial('gaussian', 10, 3);
+    h = fspecial('gaussian', 10, 4);
     for m=1:size(masks, 2)
         ai = obj.reshape(obj.A_em(:, m), 3);
+        ai = repmat(sum(ai,3), [1, 1, d3]); 
         ai_mask = imfilter(ai, h);
-        ai_mask = ai_mask./max(ai_mask(:)); 
+        ai_mask = ai_mask./max(ai_mask(:))*1.1; 
         ai_mask(ai>0) = 1; 
         % dilate 
 %         ai_mask = imdilate(repmat(sum(ai, 3)>0, [1, 1, d3]), strel('square', 3));

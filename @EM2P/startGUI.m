@@ -28,13 +28,16 @@ pos_btn_load_video = [w0, h0, w1_, h1_];
 % summary images
 % pos_btn_summary_image = [w0, h0-(h1_+dh1_), w1_, h1_];
 
-pos_btn_load_em = [w0, h0-2*(h1_+dh1_), w1_, h1_];
+pos_btn_load_em = [w0, h0-(h1_+dh1_), w1_, h1_];
 
 % choose scan id
 pos_text_scan = pos_btn_load_video + [w1_+dw1_, 0, 0, 0];
 pos_scan_left = pos_text_scan + [w1_, 0, w2_-w1_, 0];
 pos_edit_scan = pos_scan_left + [w2_, 0, 0, 0];
 pos_scan_right = pos_edit_scan + [w2_, 0, 0, 0];
+
+% visualize neuron 
+pos_btn_summary_images = pos_btn_load_video + [0, -(h1_+dh1_), 0, 0];
 pos_btn_cn = [w0+w1_+dw1_, h0-(h1_+dh1_), w4_, h1_];
 pos_btn_pnr = pos_btn_cn + [w4_+dw1_, 0, 0, 0];
 pos_btn_max = pos_btn_pnr + [w4_+dw1_, 0, 0, 0];
@@ -59,10 +62,10 @@ pos_block_right = pos_edit_block + [w2_, 0, 0, 0];
 
 
 % load em
-pos_text_blur = pos_btn_load_em + [w1_+dw1_, 0, 0, 0];
-pos_blur_left = pos_text_blur + [w1_, 0, w2_-w1_, 0];
-pos_edit_blur = pos_blur_left + [w2_, 0, 0, 0];
-pos_blur_right = pos_edit_blur + [w2_, 0, 0, 0];
+% pos_text_blur = pos_btn_load_em + [w1_+dw1_, 0, 0, 0];
+% pos_blur_left = pos_text_blur + [w1_, 0, w2_-w1_, 0];
+% pos_edit_blur = pos_blur_left + [w2_, 0, 0, 0];
+% pos_blur_right = pos_edit_blur + [w2_, 0, 0, 0];
 
 
 % summary statistics
@@ -84,27 +87,28 @@ pos_text_cell_id = pos_btn_ca_ahead + [w2_+dw1_, 0, w2_, 0];
 pos_btn_ca_next = pos_text_cell_id + [2*w2_+dw1_, 0, -w2_, 0];
 pos_btn_confidence = pos_btn_ca_next + [w2_+dw1_, 0, 3*w2_, 0];
 pos_text_rate = [pos_btn_confidence(1)+ 4*w2_+dw1_, pos_btn_confidence(2), 2*w2_, h1_];
-pos_btn_rate_0 = pos_text_rate + [w2_*2+3*dw1_, 0, -w2_, 0];
-pos_btn_delete = pos_btn_rate_0 + [w2_, 0, w5_-w2_, 0];
+pos_btn_rate_0 = pos_text_rate + [w2_*2+1*dw1_, 0, -w2_, 0];
+pos_btn_delete = pos_btn_rate_0 + [w2_, 0, 0.9*w5_-w2_, 0];
+pos_btn_soma = pos_btn_delete + [0.9*w5_+dw1_, 0, 0, 0];
+pos_btn_dendrite = pos_btn_soma + [0.9*w5_, 0, 0, 0];
+pos_btn_verified = pos_btn_dendrite + [0.9*w5_, 0, 0, 0];
 
-%pos_btn_rate_5 = [pos_btn_confidence(1)+ 4*w2_, pos_btn_confidence(2), w2_, h1_];
-% pos_btn_rate_4 = pos_btn_rate_5 + [w2_, 0, 0, 0];
-% pos_btn_rate_3 = pos_btn_rate_4 + [w2_, 0, 0, 0];
-% pos_btn_rate_2 = pos_btn_rate_3 + [w2_, 0, 0, 0];
-% pos_btn_rate_1 = pos_btn_rate_2 + [w2_, 0, 0, 0];
-% pos_btn_rate_0 = pos_btn_rate_1 + [w2_, 0, 0, 0];
-% pos_btn_delete = pos_btn_rate_0 + [w2_, 0, w5_-w2_, 0];
-% pos_btn_delete = pos_text_rate + [w2_*3, 0, w5_-w2_, 0];
-pos_btn_soma = pos_btn_delete + [w5_+dw1_, 0, 0, 0];
-pos_btn_dendrite = pos_btn_soma + [w5_, 0, 0, 0];
+pos_btn_order_neurons = pos_btn_visualize_neurons + [0, -(h1_+dh1_), 0, 0];
+pos_btn_order_by_snr = [w0+w1_+dw1_, pos_btn_order_neurons(2), 1.5*w4_, h1_];
+pos_btn_order_by_pnr = pos_btn_order_by_snr + [1.5*w4_+dw1_, 0, 0, 0];
+pos_btn_order_by_confidence = pos_btn_order_by_pnr + [1.5*w4_+dw1_, 0, 0, 0];
+pos_btn_order_by_spatial = pos_btn_order_by_confidence + [1.5*w4_+dw1_, 0, 0, 0];
+pos_btn_order_by_temporal = pos_btn_order_by_spatial + [1.5*w4_+dw1_, 0, 0, 0];
+pos_btn_order_by_label = pos_btn_order_by_temporal+ [1.5*w4_+dw1_, 0, 0, 0];
 
 % axes for showing spatial components
 pos_ax_slice = cell(obj.num_slices,1);
-pos_ax_slice{1} = [w0, h0-6*h1_-h3_, w3_, h3_];
+% pos_ax_slice{1} = [w0, h0-6*h1_-h3_, w3_, h3_];
+pos_ax_slice{1} = [w0, pos_btn_order_neurons(2)-(h3_+dh1_), w3_, h3_];
 pos_ax_corr = cell(obj.num_slices, 1);
-pos_ax_corr{1} = [w0+w3_+dw1_, h0-6*h1_-h3_, w3_, h3_];
+pos_ax_corr{1} = pos_ax_slice{1} + [w3_+dw1_, 0, 0, 0]; %[w0+w3_+dw1_, h0-6*h1_-h3_, w3_, h3_];
 pos_ax_em = cell(obj.num_slices, 1);
-pos_ax_em{1} = [w0+2*(w3_+dw1_), h0-6*h1_-h3_, w3_, h3_];
+pos_ax_em{1} = pos_ax_corr{1} + [w3_+dw1_, 0, 0, 0]; %
 for m=2:obj.num_slices
     pos_ax_slice{m} = pos_ax_slice{m-1} - [0, h3_+dh1_, 0, 0];
     pos_ax_corr{m} = pos_ax_corr{m-1} - [0, h3_+dh1_, 0, 0];
@@ -122,8 +126,10 @@ pos_btn_em_ahead = [pos_ax_score(1), pos_ax_score(2)-2*h1_, w2_, h1_];
 pos_text_em_current = pos_btn_em_ahead + [w2_+dw1_, 0, 0, 0];
 pos_btn_em_next = pos_text_em_current + [w2_+dw1_, 0, 0, 0];
 
-pos_btn_em_perfect = pos_btn_em_next + [w2_+dw1_*2, 0, w1_-w2_, 0];
-pos_btn_em_candidate = pos_btn_em_perfect + [w1_*1.02, 0, 0, 0];
+pos_btn_em_best = pos_btn_em_next + [w2_+dw1_*2, 0, w1_-w2_, 0];
+
+pos_btn_em_rematch = pos_btn_em_best + [w1_*1.02, 0, 0, 0];
+pos_btn_em_candidate = pos_btn_em_rematch + [w1_*1.02, 0, 0, 0];
 pos_btn_em_ignore = pos_btn_em_candidate + [w1_*1.02, 0, 0, 0];
 pos_btn_em_zero = pos_btn_em_ignore + [w1_*1.02, 0, 0, 0];
 
@@ -133,28 +139,9 @@ pos_btn_em_only = pos_check_em + [w2_*0.7, 0, w1_-w2_, 0];
 % the main figure
 x0_fig = 50;
 y0_fig = 100;
-w_fig = max(pos_btn_load_em(1)+w1_, pos_block_right(1)+w2_)+5;
+w_fig = sum(pos_ax_em{end}([1,3]))+10; %max(pos_btn_load_em(1)+w1_, pos_block_right(1)+w2_)+5;
 h_fig = 900;
 pos_fig = [x0_fig, y0_fig, w_fig, h_fig];
-
-% figure for aligning em data and 2p stack data
-% tmp_h = 3*(h3_+h1_);
-% pos_fig_align = [pos_fig(1)+w_fig+dw1_, y0_fig+h_fig-tmp_h, w3_+w1_, tmp_h];
-
-
-% pos_ax_align_merge = [dw1_, dh1_, w3_, h3_];
-
-% pos_ax_align_em = pos_ax_align_merge + [0, h3_+h1_, 0, 0];
-% pos_btn_align_em_dn = pos_ax_align_em + [w3_+dw1_, 0, w4_-w3_, floor(h3_/3)-h3_];
-% pos_text_align_em = pos_ax_align_em + [w3_+dw1_, h3_/3, w4_-w3_, floor(h3_/3)-h3_];
-% pos_btn_align_em_up = pos_ax_align_em + [w3_+dw1_, h3_*2/3, w4_-w3_, floor(h3_/3)-h3_];
-%
-% pos_ax_align_2p = pos_ax_align_em + [0, h3_+h1_, 0, 0];
-% pos_btn_align_2p_dn = pos_ax_align_2p + [w3_+dw1_, 0, w4_-w3_, floor(h3_/3)-h3_];
-% pos_text_align_2p = pos_ax_align_2p + [w3_+dw1_, h3_/3, w4_-w3_, floor(h3_/3)-h3_];
-% pos_btn_align_2p_up = pos_ax_align_2p + [w3_+dw1_, h3_*2/3, w4_-w3_, floor(h3_/3)-h3_];
-
-
 
 %% GUI layouts
 try % close old GUI
@@ -230,29 +217,29 @@ handles.btn_load_ca = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units'
     'fontweight', 'bold', 'fontsize', font_size, 'callback', 'cb_btn_load_ca;');
 
 
-%% EM blurring
-handles.text_blur = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-    'position', pos_text_blur, 'string', 'z blur', 'fontsize', font_size, ...
-    'fontweight', 'bold', 'backgroundcolor', handles.color_gray);
-handles.edit_blur = uicontrol(handles.fig_main, 'style', 'edit', 'units', 'pixels', ...
-    'position', pos_edit_blur, 'string', num2str(obj.em_zblur), 'fontweight', 'bold',...
-    'callback', 'cb_edit_blur;');
-handles.btn_blur_left = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-    'position', pos_blur_left, 'string', '<<', ...
-    'callback', 'cb_btn_blur_left;');
-handles.btn_blur_right = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-    'position', pos_blur_right, 'string', '>>', ...
-    'callback', 'cb_btn_blur_right;');
-
-handles.btn_load_em = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-    'position', pos_btn_load_em, 'string', 'load EM', 'backgroundcolor', handles.color_cyan,...
-    'fontweight', 'bold', 'fontsize', font_size, 'callback', 'cb_btn_load_em;');
+% %% EM blurring
+% handles.text_blur = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+%     'position', pos_text_blur, 'string', 'z blur', 'fontsize', font_size, ...
+%     'fontweight', 'bold', 'backgroundcolor', handles.color_gray);
+% handles.edit_blur = uicontrol(handles.fig_main, 'style', 'edit', 'units', 'pixels', ...
+%     'position', pos_edit_blur, 'string', num2str(obj.em_zblur), 'fontweight', 'bold',...
+%     'callback', 'cb_edit_blur;');
+% handles.btn_blur_left = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+%     'position', pos_blur_left, 'string', '<<', ...
+%     'callback', 'cb_btn_blur_left;');
+% handles.btn_blur_right = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+%     'position', pos_blur_right, 'string', '>>', ...
+%     'callback', 'cb_btn_blur_right;');
+% 
+% handles.btn_load_em = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+%     'position', pos_btn_load_em, 'string', 'load EM', 'backgroundcolor', handles.color_cyan,...
+%     'fontweight', 'bold', 'fontsize', font_size, 'callback', 'cb_btn_load_em;');
 
 %% summary statistics
 % buttons
-% handles.btn_pick = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-%     'position', pos_btn_pick, 'string', 'get seed', 'backgroundcolor', handles.color_cyan, ...
-%     'fontsize', font_size, 'fontweight', 'bold','callback', 'cb_btn_pick');
+handles.btn_summary_images = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_summary_images, 'string', 'sum. img.', 'backgroundcolor', handles.color_cyan, ...
+    'fontsize', font_size, 'fontweight', 'bold','callback', 'cb_btn_slice');
 
 handles.btn_cn = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
     'position', pos_btn_cn, 'string', 'CN', 'backgroundcolor', handles.color_pink, ...
@@ -323,21 +310,6 @@ handles.text_rate = uicontrol(handles.fig_main, 'style', 'text', 'units', 'pixel
     'position', pos_text_rate, 'string', '', 'fontsize', font_size, ...
     'backgroundcolor', 'white', 'fontweight', 'bold', 'foregroundcolor', 'blue');
 
-% handles.btn_rate_5 = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-%     'position', pos_btn_rate_5, 'string', '5', 'fontsize', font_size, ...
-%     'callback', 'neuron.match_status.confidence(cell_id)=5; cb_btn_rate;');
-% handles.btn_rate_4 = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-%     'position', pos_btn_rate_4, 'string', '4','fontsize', font_size,  ...
-%     'callback', 'neuron.match_status.confidence(cell_id)=4; cb_btn_rate;');
-% handles.btn_rate_3 = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-%     'position', pos_btn_rate_3, 'string', '3', 'fontsize', font_size, ...
-%     'callback', 'neuron.match_status.confidence(cell_id)=3; cb_btn_rate;');
-% handles.btn_rate_2 = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-%     'position', pos_btn_rate_2, 'string', '2', 'fontsize', font_size, ...
-%     'callback', 'neuron.match_status.confidence(cell_id)=2; cb_btn_rate;');
-% handles.btn_rate_1 = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-%     'position', pos_btn_rate_1, 'string', '1', 'fontsize', font_size, ...
-%     'callback', 'neuron.match_status.confidence(cell_id)=1; cb_btn_rate;');
 handles.btn_rate_0 = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
     'position', pos_btn_rate_0, 'string', '0', 'fontsize', font_size, ...
     'callback', 'neuron.match_status.confidence(cell_id)=0; cb_btn_rate;');
@@ -353,6 +325,40 @@ handles.btn_soma = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', '
 handles.btn_dendrite = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
     'position', pos_btn_dendrite, 'string', 'dendrite', 'fontweight', 'bold',...
     'fontsize', font_size, 'callback', 'neuron.labels(cell_id) = 2; cb_btn_label;');
+
+handles.btn_verified = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_verified, 'string', 'verified', 'fontweight', 'bold',...
+    'fontsize', font_size, 'callback', 'neuron.labels(cell_id) = neuron.labels(cell_id)*(-1); cb_btn_label;');
+
+%% order neurons 
+handles.btn_order_neurons = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_order_neurons, 'string', 'order cell',...
+    'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_cyan, ...
+    'callback', 'neuron.orderROIs(); cell_id = 1; cb_btn_slice; cb_show_2p_neuron;');
+handles.btn_order_by_snr = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_order_by_snr, 'string', 'SNR',...
+    'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_pink, ...
+    'callback', 'neuron.orderROIs(''snr''); cell_id = 1; cb_btn_slice; cb_show_2p_neuron;');
+handles.btn_order_by_pnr = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_order_by_pnr, 'string', 'PNR',...
+    'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_pink, ...
+    'callback', 'neuron.orderROIs(''pnr''); cell_id = 1; cb_btn_slice; cb_show_2p_neuron;');
+handles.btn_order_by_confidence = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_order_by_confidence, 'string', 'Confiden.',...
+    'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_pink, ...
+    'callback', 'neuron.orderROIs(''confidence''); cell_id = 1; cb_btn_slice; cb_show_2p_neuron;');
+handles.btn_order_by_spatial = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_order_by_spatial, 'string', 'Spatial',...
+    'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_pink, ...
+    'callback', 'neuron.orderROIs(''spatial_cluster''); cell_id = 1; cb_btn_slice; cb_show_2p_neuron;');
+handles.btn_order_by_temporal = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_order_by_temporal, 'string', 'Temporal',...
+    'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_pink, ...
+    'callback', 'neuron.orderROIs(''temporal_cluster''); cell_id = 1; cb_btn_slice; cb_show_2p_neuron;');
+handles.btn_order_by_label = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_order_by_label, 'string', 'Labels',...
+    'fontweight', 'bold', 'fontsize', font_size, 'background', handles.color_pink, ...
+    'callback', 'neuron.orderROIs(''labels''); cell_id = 1; cb_btn_slice; cb_show_2p_neuron;');
 
 %% initialize a component given a seed pixel
 % handles.btn_init_seed = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
@@ -379,9 +385,14 @@ handles.btn_em_only = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units'
     'position', pos_btn_em_only, 'string', 'EM only', 'backgroundcolor', handles.color_gray, 'fontsize', font_size,...
     'callback', 'ease.show_em_only = xor(true, ease.show_em_only); cb_btn_em_only');
 
-handles.btn_em_perfect = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
-    'position', pos_btn_em_perfect, 'string', 'perfect', 'fontsize', font_size,...
-    'callback', 'cb_perfect_match_callback; ');
+
+handles.btn_em_best = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_em_best, 'string', 'best match', 'fontsize', font_size,...
+    'callback', 'em_rank=1; cb_check_match; ');
+
+handles.btn_em_rematch = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
+    'position', pos_btn_em_rematch, 'string', 'rematch', 'fontsize', font_size,...
+    'callback', 'cb_btn_rematch; ');
 
 handles.btn_em_candidate = uicontrol(handles.fig_main, 'style', 'pushbutton', 'units', 'pixels', ...
     'position', pos_btn_em_candidate, 'string', 'candidate', 'fontsize', font_size,...
@@ -413,6 +424,8 @@ switch lower(e.Key)
         evalin('base', 'neuron.labels(cell_id) = 1; cb_btn_label;');
     case 'd' % label as dendrite
         evalin('base', 'neuron.labels(cell_id) = 2; cb_btn_label;');
+    case 'v' 
+        evalin('base', 'neuron.labels(cell_id) = neuron.labels(cell_id)*(-1); cb_btn_label;'); 
     case 'n' % check enxt cell
         evalin('base', 'cell_id = cell_id+1; cb_show_2p_neuron;');
     case 'b' % check enxt cell

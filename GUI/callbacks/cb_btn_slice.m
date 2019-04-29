@@ -14,6 +14,7 @@ mscan = ease.scan_id;
 
 for mslice = 1:ease.num_slices
     z = ease.video_zvals_updated(ease.scan_id, mslice);
+    cla(ease.gui.ax_slice{mslice}); 
     hold(ease.gui.ax_slice{mslice}, 'on')
     imagesc(eval(sprintf('summary_images.%s(:, :, mslice)', ease.nam_show)), 'parent', ease.gui.ax_slice{mslice}); 
     axis(ease.gui.ax_slice{mslice}, 'tight');

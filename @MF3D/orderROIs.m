@@ -30,12 +30,12 @@ if ischar(srt)
             l3 = sum(obj.A.^3,1) .*sum(C_.^3, 2)';
             [~, srt] = sort(l3, 'descend');
         case 'temporal_cluster'
-            obj.orderROIs('pnr');
+            fprintf('use the temporal correlations to order neurons\n');
             dd = pdist(obj.C_raw, 'cosine');
             tree = linkage(dd, 'complete');
             srt = optimalleaforder(tree, dd);
         case 'spatial_cluster'
-            obj.orderROIs('pnr');
+            fprintf('use the spatial correlations to order neurons\n');
             A_ = bsxfun(@times, obj.A, 1./sqrt(sum(obj.A.^2, 1)));
             temp = 1-A_' * A_;
             dd = temp(tril(true(size(temp)), -1));
@@ -45,6 +45,9 @@ if ischar(srt)
         case 'confidence'
             fprintf('use the confidence score to order neurons\n');
             [~, srt] = sort(obj.match_status.confidence, 'descend');
+             case 'labels'
+            fprintf('use the labels to order neurons\n');
+            [~, srt] = sort(obj.labels);
             
         case 'match_scores'
             fprintf('use the matching score to order neurons\n');

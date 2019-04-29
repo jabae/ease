@@ -44,7 +44,7 @@ classdef MF3D < handle
         % status = 1, it's a scalar storing the matching ID
         % status = n, it's an array of all EM IDs
         whitelist = [];  % add the neuron to white list (yes 1; no 0)
-        labels = [];   % label the neuron as soma(1) or dendrite(2)
+        labels = [];   % label the neuron as soma(1) or dendrite(2); negative value means that the neuron has been verified. 
         tags;       % tags bad neurons with multiple criterion using a 16 bits number
         % ai indicates the bit value of the ith digits from
         % right to the left
@@ -768,6 +768,7 @@ classdef MF3D < handle
             tmp_pos = get(gcf, 'position');
             tmp_pos(1:2) =[0, 0];
             set(gcf, 'position', tmp_pos);
+            figure(gcf); 
             if save_figs
                 saveas(gcf, sprintf('pair_%d_%d_temporal.pdf', ind_pair(1), ind_pair(2)));
             end
@@ -796,12 +797,12 @@ classdef MF3D < handle
         end
         
         %% get EM ids
-        function em_ids = get_em_ids(obj, ind, em_info)
-            if isempty(ind)
-                ind = 1:size(obj.A,2);
+        function flag = check_existence(obj, target_ids)
+            em_ids = cell2mat(obj.match_status.em_ids);
+            flag = false(size(target_ids)); 
+            for m=1:length(target_ids)
+               flag(m) = any(em_ids==target_ids(m));  
             end
-            ind = cell2mat(obj.match_status.em_ids(ind));
-            em_ids = em_info(ind, 1);
         end
         
         %% find EM boundary
@@ -833,12 +834,15 @@ classdef MF3D < handle
         end
         
         %% select pairs to merge
-        function correlated_pairs = find_correlated_pairs(obj, corr_thr)
+        function [correlated_pairs, A_sim, C_sim] = find_correlated_pairs(obj, corr_thr)
             if ~exist('corr_thr', 'var') || isempty(corr_thr)
                 corr_thr = [0.1, 0.3];
             elseif length(corr_thr)==1
                 corr_thr = [0.1, corr_thr];
             end
+            fprintf('minimum spatial correlation: %.2f\n', corr_thr(1)); 
+            fprintf('minimum temporal correlation: %.2f\n', corr_thr(2)); 
+            
             % corr_thr: [min_spatial_similarit, min_temporal_similarity]
             A_sim = cosine_similarity(obj.A);
             C_sim = cosine_similarity(obj.C');
@@ -1038,8 +1042,51 @@ classdef MF3D < handle
             
         end
         
+        %% construct weights for fixing boundaries effect 
+        function weights_boundaries = fix_boundary_effects(obj)
+            ind_in = obj.reshape(obj.spatial_range, 3); 
+            ind_edge = imdilate(ind_in, strel('disk', 3)) - ind_in; 
+            temp = imfilter(ind_edge, ones(3)); 
+            weights_boundaries = obj.reshape(temp, 1);       
+        end
+        
         %% run EASE automatically
         at_ease(obj, configs);
+        
+        %% manually delete neurons 
+        function vij = calculate_score(obj, ai, pj)
+            % check the spatial footprint
+            ai = obj.reshape(ai, 3); 
+            pj = obj.reshape(pj, 3);
+            ai(ai<0) = 0;
+            tmp_img = image_local_corr(ai, pj, 7);
+            vij = corr(tmp_img(:).*(pj(:)>0), pj(:));
+            
+        end
+        
+        %% detailed check EM matches 
+        function [idx_top, v_top] = check_top_matches(obj, Aem)
+            K = size(obj.A, 2); 
+            ntop = 5; 
+            idx_top = zeros(ntop, K); 
+            v_top = zeros(ntop, K); 
+            for m=1:K 
+                [~, temp] = sort(obj.scores(m,:), 'descend'); 
+                idx = temp(1:ntop); 
+                idx_top(:, m) = idx; 
+                tmp_ai = obj.reshape(obj.A_corr(:, m), 3);
+                for n=1:ntop
+                    ai_em = obj.reshape(Aem(:, idx(n)), 3);
+                    tmp_img = image_local_corr(tmp_ai, ai_em, 7);
+                    %             tmp_corr = corr(tmp_img(:).*tmp_ai(:), tmp_img(:).*ai(:));
+                    tmp_corr = corr(tmp_img(:).*(ai_em(:)>0), ai_em(:));
+                    v_top(n, m) = tmp_corr; 
+                end
+            end 
+            
+        end 
+        
+      
     end
 end
 
