@@ -27,8 +27,8 @@ details of the data information will be explained in the section of [Run EASE](r
    ```
 2. [install mysql](https://dev.mysql.com/doc/refman/8.0/en/installing.html) and configure the database. You also need to test your [datajoint](https://docs.datajoint.io/matlab/admin/Admin.html) connection with MySQL
 ## Use EASE 
-We described a typical pipeline of running EASE. Please check it [here](./how_to_use.md)
-We also uploaded our running scripts for producing results in our [EASE paper](xxx). Please check it [here](https://github.com/zhoupc/ease_project)
+* We described a typical pipeline of running EASE. Please check it [here](./how_to_use.md).
+* We also uploaded our running scripts for producing results in our [EASE paper](xxx). Please check it [here](https://github.com/zhoupc/ease_project)
 
 ## References 
 ## Copyright 
