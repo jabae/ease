@@ -325,7 +325,7 @@ classdef EM2P < handle
         connect_database(obj, database_list, dj_username, dj_password)
         
         %% visualize the mesh of one EM segment
-        visualize_em_mesh(obj, em_id, new_figure, mesh_color);
+        visualize_em_mesh(obj, em_id, new_figure, mesh_color, z_zoomin);
         
         %% visualize the voxelized version of one EM segment
         visualize_em_voxels(obj, em_id, new_figure, voxel_color);
@@ -443,11 +443,14 @@ classdef EM2P < handle
             end 
         end 
         %% process all scans given the configuration 
-        function process_scans(obj, scan_list, configs)
+        function process_scans(obj, scan_list, configs, frame_range)
             n_list = length(scan_list); 
             for m=1:n_list
                obj.scan_id = scan_list(m); 
-               neuron = obj.get_MF3D(); 
+               neuron = obj.get_MF3D();
+               if exist('frame_range', 'var') && ~isempty(frame_range)
+                   neuron.frame_range = frame_range;
+               end
                neuron.at_ease(configs); 
                obj.save_MF3D(); 
             end
@@ -480,6 +483,7 @@ classdef EM2P < handle
             for m=1:n_list
                 obj.scan_id = scan_list(m);
                 neuron = obj.get_MF3D(false);  % load results; don't create new
+                neuron.normalize('c_noise'); 
                 neurons{m} = neuron;
                 
                 em_ids{m} = cell2mat(neuron.match_status.em_ids)';

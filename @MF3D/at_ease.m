@@ -62,11 +62,11 @@ for miter=1:n_iters
     options_init = tmp_config.options_init;
     if miter==2
         options_init.clear_results = false;
-        %     elseif options_init.clear_results
-        %         temp = input('Do you want to clear all existing results? (y/n)  ', 's');
-        %         if ~strcmpi(temp, 'y')
-        %             options_init.clear_results = false;
-        %         end
+    elseif options_init.clear_results && ~isempty(obj.A)
+        temp = input('Do you want to clear all existing results? (y/n)  ', 's');
+        if ~strcmpi(temp, 'y')
+            options_init.clear_results = false;
+        end
     end
     
     % initialize neurons
@@ -75,9 +75,9 @@ for miter=1:n_iters
     obj.options.nb = tmp_config.nb;
     
     % run HALS to update
-    fprintf('update model variables\n'); 
+    fprintf('updating model variables\n'); 
     obj.hals(Y, [], [], false);
-    
+    fprintf('done\n'); 
     % evaluate the matching performance and correct the bad matches
     if ~isnan(tmp_config.min_rank)
         obj.evaluate_matching_confidence(Y, Aem, segment_ids);

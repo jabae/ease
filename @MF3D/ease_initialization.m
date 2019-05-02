@@ -37,7 +37,7 @@ options_default = struct('init_method', 'tf', ...%method for initializing single
     'show_fig', true, ...        % show figures for visualizing the initializaito step
     'K_candidate', 3000,...     % number of neurons to be considered
     'K_new', 50, ...             % number of neurons to be added
-    'min_pnr',2);                % the minimum peak-to-noise ratio for a good trace
+    'min_pnr',3);                % the minimum peak-to-noise ratio for a good trace
 
 options = fix_missing_options(options_default, options); % fix missing values of the input options
 init_method = options.init_method;
@@ -293,7 +293,7 @@ while (k_new < K_new+K_pre) && (k_tried < K_new*10)
     %     ai = imfilter(ai, fspecial('gaussian', 3, 1));
     ci = reshape(ai, 1, []) * Y; %C_(ind_max, :);
     temp = imfilter(obj.reshape(double(ai>max(ai(:))*0.1), 3), ones(10));
-    if sum(temp(:))<50
+    if max(temp(:))<50
         is_soma = false; 
     else
         is_soma = true; 
@@ -496,7 +496,7 @@ end
 fprintf('initialized %d neurons after trying %d EM components.\n', k_new-K_pre, k_tried); 
 delete('temp_C.bin');
 ind_del = (obj.match_status.status==0);
-ind_del(1:K_pre) = true; 
+ind_del(1:K_pre) = false; 
 if any(ind_del) 
     fprintf('early termination. delete the pre-assigned spaces.\n');
     obj.delete(ind_del);
