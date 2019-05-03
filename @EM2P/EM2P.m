@@ -73,12 +73,12 @@ classdef EM2P < handle
         ssub = 2;       % downsampling factor between stack data and video data
         
         % data information
-        num_scans = 8;          % number of total scans
-        num_slices = 3;         % number of the imaged slices per scan
-        num_blocks = 3;         % number of temporal blocks per slice
-        dims_stack = [512, 512, 310];      % dimension of the stack data
-        dims_video = [256, 256];        % dimension of the functional imaging data
-        range_2p = [400, 400, 310];     % spatial range of 2p stack
+        num_scans = 0;          % number of total scans
+        num_slices = 0;         % number of the imaged slices per scan
+        num_blocks = 0;         % number of temporal blocks per slice
+        dims_stack = [0, 0, 0];      % dimension of the stack data
+        dims_video = [0, 0];        % dimension of the functional imaging data
+        range_2p = [0, 0, 0];     % spatial range of 2p stack
         
         % default calcium imaging data to be analyzed.
         scan_id = 1;
@@ -120,7 +120,8 @@ classdef EM2P < handle
         dj_connected = false;
         
         % datajoint
-        dj_name = [];
+        dj_name = [];    % datajoitn name 
+        db_name = [];    % database name 
         rel_mesh = [];
         rel_voxels = [];
         rel_footprints = [];
@@ -595,9 +596,79 @@ classdef EM2P < handle
             else
                 fprintf('the backup name has been used.\n'); 
             end
-           
-            
         end
+        
+        %% create functional imaging data loader 
+        function import_videos(obj, use_block)
+            if ~exist('use_block', 'var') || isempty(use_block)
+                use_block = false; 
+            end
+            
+            %% choose a folder including the video data
+            functional_data_folder = uigetdir([], 'choose the data folder');
+            
+            fprintf('data information\n');
+            if obj.num_scans == 0
+                obj.num_scans = input('number of scans: ');
+                obj.num_slices = input('number of slices per scan: ');
+                obj.num_blocks = input('number of blocks per scan: ');
+            end
+            
+            dl_videos = cell(obj.num_scans, obj.num_slices, obj.num_blocks);
+            video_frames = cell(obj.num_scans, obj.num_slices, obj.num_blocks); 
+            for scan_idx=1:obj.num_scans
+                for slice_idx=1:obj.num_slices
+                    for block_idx=1:obj.num_blocks
+                        tmp_str = sprintf('scan%d_slice%d_block%d.mat', scan_idx, slice_idx, block_idx);;
+                        file_name =fullfile(functional_data_folder, tmp_str);
+                        temp = whos(matfile(file_name));
+                        tmp_dims = temp.size;
+                        vars_raw = {file_name};
+                        fname_raw = @(vars, z) vars{1};
+                        dl_videos{scan_idx, slice_idx, block_idx} = IDL('vars', vars_raw, ...
+                            'type', 'mat', 'fname', fname_raw, 'dims', tmp_dims(1:(end-1)), ...
+                            'num_frames', tmp_dims(end));
+                        video_frames{scan_idx, slice_idx, block_idx} = tmp_dims(end); 
+                    end
+                end
+            end
+            
+            %% save the data with block structures 
+            if use_block
+                % to be added 
+            end 
+            %% save
+            save functional_data dl_videos video_frames;
+        end 
+        
+        %% create a database schema 
+        function create_schema(obj)
+            %% copy the template schema 
+            schema_folder = fullfile(obj.dir_project, 'schemas', ['+', obj.dj_name]); 
+            if exist('schema_folder', 'dir')
+               fprintf('The schema has been created already. Do you want to delete it?\n'); 
+               temp = input('choose (y/n): ', 's'); 
+               if ~strcmpi(temp, 'y')
+                   return; 
+               end 
+            else
+                mkdir(schema_folder); 
+            end
+            source_folder = fullfile(fi.locate('ease', true), ...
+                'packages', 'template_schema'); 
+            copyfile(source_folder, schema_folder); 
+            
+            %% replace database name
+            all_files = dir(schema_folder); 
+            for m=1:length(all_files)
+                tmp_file = fullfile(all_files(m).folder, all_files(m).name); 
+                [~, ~, temp] = fileparts(tmp_file); 
+                if strcmpi(temp, '.m')
+                    find_and_replace(tmp_file, 'microns_ta3p100', obj.db_name); 
+                    find_and_replace(tmp_file, 'ta3p100', obj.dj_name);  
+                end 
+            end
+        end 
     end
 end
 

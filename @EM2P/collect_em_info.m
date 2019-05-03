@@ -55,6 +55,8 @@ if ~exist(tmp_file, 'file')
     end
     fprintf('\n'); 
     
+    obj.em_info = EM_info; 
+    obj.em_ranges = em_ranges; 
     save(fullfile(obj.data_folder, obj.matfile_em), 'EM_info', 'em_ranges',...
         '-v7.3');
     fprintf('Done.\n'); 

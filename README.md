@@ -21,7 +21,7 @@ EASE is a toolbox for fusing calcium imaging data and densely reconstructed Elec
 details of the data information will be explained in the section of [Run EASE](run-ease); 
 
 ## Installation
-1. install [F-image]() and then install EASE with F-image in MATLAB 
+1. install [F-image](https://github.com/zhoupc/F-image) and then install EASE with F-image in MATLAB 
    ```matlab 
     >> fi.install('ease')
    ```

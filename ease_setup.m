@@ -22,3 +22,4 @@ addpath(fullfile(EASE_dir, 'GUI', 'callbacks'));
 
 %% create a class object 
 ease = EM2P(); 
+addpath(fullfile(ease.dir_project, 'schemas')); 

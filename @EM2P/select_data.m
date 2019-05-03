@@ -86,6 +86,12 @@ obj.write_config();
 metainfo = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
 temp = metainfo.(obj.data_name);
 obj.dj_name = temp.datajoint_name; 
+obj.db_name = temp.database_name; 
+
+% create a schema 
+if ~exist(fullfile(obj.dir_project, 'schemas', ['+',obj.dj_name]), 'dir')
+    obj.create_schema(); 
+end
 
 if isfield(temp, 'em_scale_factor')
     obj.em_scale_factor = temp.em_scale_factor;

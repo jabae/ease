@@ -9,6 +9,7 @@ function init_project(obj, dir_project)
     - /results/
     - /Videos/
     - /Figures/
+    - /schemas
 %}
 
 %% inputs
@@ -37,7 +38,7 @@ if ~exist('dir_project', 'var') || isempty(dir_project)
 end
 
 %% create subfolders
-subfolder_list = {'scripts', 'data', 'results', 'Figures', 'Videos'};
+subfolder_list = {'scripts', 'data', 'results', 'Figures', 'Videos', 'schemas'};
 for m=1:length(subfolder_list)
     tmp_folder = fullfile(obj.dir_project, subfolder_list{m});
     if ~exist(tmp_folder, 'dir')
