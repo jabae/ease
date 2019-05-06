@@ -598,8 +598,8 @@ classdef EM2P < handle
             end
         end
         
-        %% create functional imaging data loader 
-        function import_videos(obj, use_block)
+        %% create calcium imaging data loader 
+        function import_data(obj, use_block)
             if ~exist('use_block', 'var') || isempty(use_block)
                 use_block = false; 
             end
@@ -609,9 +609,9 @@ classdef EM2P < handle
             
             fprintf('data information\n');
             if obj.num_scans == 0
-                obj.num_scans = input('number of scans: ');
-                obj.num_slices = input('number of slices per scan: ');
-                obj.num_blocks = input('number of blocks per scan: ');
+                fprintf('number of scans: %d', obj.num_scans);
+                fprintf('number of slices per scan: %d', obj.num_slices);
+                fprintf('number of blocks per scan: %d', obj.num_blocks);
             end
             
             dl_videos = cell(obj.num_scans, obj.num_slices, obj.num_blocks);
@@ -633,12 +633,23 @@ classdef EM2P < handle
                 end
             end
             
-            %% save the data with block structures 
+            % save the data with block structures 
             if use_block
                 % to be added 
             end 
+            
+            %% choose the stack data 
+            fprintf('choose the high resolution structural data\n'); 
+            [tmp_file, tmp_path] = uigetfile('', 'high resolution stack file'); 
+            file_name = fullfile(tmp_path, tmp_file); 
+            temp = whos(matfile(file_name)); 
+            dl_stack = IDL('vars', file_name, 'type', 'mat4d', ...
+                'fname', @(vars, z) vars{1}, 'dims', temp.size,...
+                'num_frames', 1, 'nfiles', false);  
+            
             %% save
-            save functional_data dl_videos video_frames;
+            save(fullfile(obj.data_folder, 'calcium_imaging_data'), ...
+                'dl_videos', 'dl_stack', 'video_frames');
         end 
         
         %% create a database schema 

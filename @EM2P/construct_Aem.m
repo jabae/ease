@@ -38,7 +38,8 @@ if strcmpi(obj.data_name, 'pinky40')
 else
     rel0 = obj.rel_footprints & ...
         sprintf('segmentation=%d', obj.em_segmentation) & ...
-        sprintf('version=%d', obj.blur_version);
+        sprintf('version=%d', obj.blur_version) & ...
+        'n_voxels>0';
 end
 n_voxels = rel0.fetchn('n_voxels');  % fetch number of voxels
 n_voxels(n_voxels<min_pixel_number) = [];

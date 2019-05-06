@@ -56,4 +56,3 @@ yaml.WriteYaml(tmp_yamlpath, temp);
 fprintf('%s: dataset added. Here are things you need to do: \n', dataname); 
 fprintf('\t1. add data files to folder: %s\n',  tmp_datafolder); 
 fprintf('\t2. modify data options: %s\n', fullfile(obj.dir_project, sprintf('%s_config.yaml', dataname)));
-fprintf('\t3. add database schema to access %s\n.', datajoint_name); 

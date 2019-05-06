@@ -41,7 +41,7 @@ fprintf('********************************************\n');
 
 data_id = input('data ID: ');
 while true
-    if any(data_id==[1, 2])
+    if any(data_id==(1:length(datasets)))
         data_name = datasets{data_id};
         fprintf('you selected data %s\n', data_name);
         break;

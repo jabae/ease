@@ -10,7 +10,6 @@ fi.usepkg({'yaml', ...  % load YAML files
 quiet = true; 
 EASE_dir = fi.locate('ease', quiet);
 addpath(EASE_dir);
-addpath(fullfile(EASE_dir, 'scripts'));
 addpath(fullfile(EASE_dir, 'packages'));
 addpath(fullfile(EASE_dir, 'functions'));
 
