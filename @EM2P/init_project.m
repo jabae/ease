@@ -33,8 +33,9 @@ function init_project(obj, dir_project)
 
 
 %% create a project folder
+fprintf('create a project folder for storing the data and analysis output.\n'); 
 if ~exist('dir_project', 'var') || isempty(dir_project)
-    obj.dir_project = uigetdir();
+    obj.dir_project = uigetdir('', 'choose or create a folder');
 end
 
 %% create subfolders
@@ -49,9 +50,10 @@ end
 %% create a mat file to store important information
 project_info = fullfile(obj.dir_project, 'metainfo.yaml');
 if ~exist(project_info, 'file')
-    metainfo.datasets_list = {'example_data'};
-    metainfo.databases_list = {'example_host'};
-    metainfo.example_data = struct('datajoint_name', 'ta3');
+    metainfo.datasets_list = {'pinky100'};
+    metainfo.databases_list = {'127.0.0.1:3306'};
+    metainfo.example_data = struct('datajoint_name', 'ta3p100', ...
+        'database_name', 'microns_ta3p100', 'rel_mesh', ta3p100.Mesh);
     yaml.WriteYaml(project_info, metainfo);
 end
 

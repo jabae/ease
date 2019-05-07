@@ -216,6 +216,75 @@ classdef EM2P < handle
             end
         end
         
+        %% refresh EASE after updating metainfo or configs 
+        function refresh(obj)
+            % update configurations
+            if ~isempty(obj.yaml_path) || exist(obj.yaml_path, 'file')
+                obj.read_config();
+            end
+            
+            % choose project folder
+            tmp_file = fullfile(fi.locate('ease', true), '.projects.mat');
+            load(tmp_file, 'projects');
+            
+            % check whether the current project folder is within the list
+            % of project folder
+            flag_exist = false; 
+            for m=1:length(projects)
+                if strcmpi(projects{m}, obj.dir_project)
+                    flag_exist = true; 
+                    break; 
+                end 
+            end 
+            if isempty(obj.dir_project) || flag_exist==false
+                
+                if isempty(projects)
+                    obj.init_project();
+                elseif length(projects)==1&& exist(projects{1}, 'dir') 
+                    obj.dir_project = projects{1};
+                    fprintf('project folder: %s\n', projects{1});
+                else
+                    fprintf('there are following projects: \n');
+                    
+                    n_projects = length(projects);
+                    for m=1:length(projects)
+                        fprintf('--%d: %s\n', m, projects{m});
+                    end
+                    fprintf('\n***************** GUIDE *****************\n');
+                    fprintf('type  0: create a new one\n');
+                    fprintf('type  k: choose the k-th project shown above\n');
+                    fprintf('type -k: delete the k-th project shown above\n');
+                    fprintf('type k+1: select an existing project folder\n');
+                    fprintf('*****************  END  *****************\n');
+                    
+                    while true
+                        tmp_k = input('\nchoose: ');
+                        if tmp_k==0
+                            obj.init_project();
+                            break;
+                        elseif tmp_k > n_projects
+                            [dir_name] = uigetdir();
+                            projects{n_projects+1} = dir_name;
+                            obj.dir_project = dir_name;
+                            break;
+                        elseif tmp_k>0  %select a project
+                            obj.dir_project = projects{tmp_k};
+                            break;
+                        elseif abs(tmp_k)<= n_projects  % delete a project
+                            projects{abs(tmp_k)} = [];
+                        end
+                    end
+                    projects(cellfun(@isempty, projects)) = [];
+                    save(tmp_file, 'projects');
+                end
+            end
+            
+            % load databases and datasets
+            temp = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
+            obj.datasets_list = temp.datasets_list;
+            obj.databases_list = temp.databases_list;
+        end
+        
         %% delete a project
         function del_project(obj)
             tmp_file = fullfile(fi.locate('ease', true), '.projects.mat');
@@ -322,6 +391,9 @@ classdef EM2P < handle
         %% set options for projecting EM
         options = set_projections_options(obj);
         
+        %% add a database 
+        add_database(obj, databases_list); 
+        
         %% connect to database
         connect_database(obj, database_list, dj_username, dj_password)
         
@@ -342,6 +414,9 @@ classdef EM2P < handle
         
         %% add a new dataset
         add_dataset(obj);
+        
+        %% delete a dataset
+        del_dataset(obj);
         
         %% convert indices from 2p stack to video
         [idx_new, dims_new] = convert_idx(obj, idx);
@@ -598,59 +673,101 @@ classdef EM2P < handle
             end
         end
         
-        %% create calcium imaging data loader 
-        function import_data(obj, use_block)
-            if ~exist('use_block', 'var') || isempty(use_block)
-                use_block = false; 
-            end
-            
-            %% choose a folder including the video data
-            functional_data_folder = uigetdir([], 'choose the data folder');
-            
-            fprintf('data information\n');
-            if obj.num_scans == 0
-                fprintf('number of scans: %d', obj.num_scans);
-                fprintf('number of slices per scan: %d', obj.num_slices);
-                fprintf('number of blocks per scan: %d', obj.num_blocks);
-            end
-            
-            dl_videos = cell(obj.num_scans, obj.num_slices, obj.num_blocks);
-            video_frames = cell(obj.num_scans, obj.num_slices, obj.num_blocks); 
-            for scan_idx=1:obj.num_scans
-                for slice_idx=1:obj.num_slices
-                    for block_idx=1:obj.num_blocks
-                        tmp_str = sprintf('scan%d_slice%d_block%d.mat', scan_idx, slice_idx, block_idx);;
-                        file_name =fullfile(functional_data_folder, tmp_str);
-                        temp = whos(matfile(file_name));
-                        tmp_dims = temp.size;
-                        vars_raw = {file_name};
-                        fname_raw = @(vars, z) vars{1};
-                        dl_videos{scan_idx, slice_idx, block_idx} = IDL('vars', vars_raw, ...
-                            'type', 'mat', 'fname', fname_raw, 'dims', tmp_dims(1:(end-1)), ...
-                            'num_frames', tmp_dims(end));
-                        video_frames{scan_idx, slice_idx, block_idx} = tmp_dims(end); 
+        %% modify configurations 
+        function modify_configs(obj, dataname)
+            if ~exist('dataname', 'var') || isempty(dataname)
+                % update dataset list
+                obj.refresh();
+                datasets = obj.datasets_list;
+                
+                % choose the dataset to be updated
+                fprintf('\n**********choose the data to use**********\n');
+                for m=1:length(datasets)
+                    fprintf('%d: %s\n', m, datasets{m});
+                end
+                fprintf('********************************************\n');
+                
+                data_id = input('data ID: ');
+                while true
+                    if any(data_id==(1:length(datasets)))
+                        dataname = datasets{data_id};
+                        fprintf('you selected data %s\n', dataname);
+                        break;
+                    else
+                        data_id = input('please type a valid data ID: ');
                     end
                 end
             end
             
-            % save the data with block structures 
-            if use_block
-                % to be added 
-            end 
-            
-            %% choose the stack data 
-            fprintf('choose the high resolution structural data\n'); 
-            [tmp_file, tmp_path] = uigetfile('', 'high resolution stack file'); 
-            file_name = fullfile(tmp_path, tmp_file); 
-            temp = whos(matfile(file_name)); 
-            dl_stack = IDL('vars', file_name, 'type', 'mat4d', ...
-                'fname', @(vars, z) vars{1}, 'dims', temp.size,...
-                'num_frames', 1, 'nfiles', false);  
-            
-            %% save
-            save(fullfile(obj.data_folder, 'calcium_imaging_data'), ...
-                'dl_videos', 'dl_stack', 'video_frames');
+            % update configurations
+            fprintf('update the data info by modifying the yaml file directly.\nWhen it is done, type Enter to continue.\n');
+            edit(fullfile(obj.dir_project, sprintf('%s_config.yaml', dataname)));
+            pause;
+            fprintf('done\n'); 
         end 
+        
+        %% create calcium imaging data loader 
+        function import_data(obj)
+
+            %% choose a folder including the video data
+            fprintf('step 1: choose the folder containing all calcium imaging video data.\n'); 
+            target_file = fullfile(obj.data_folder, 'dl_videos.mat'); 
+            if ~exist(target_file, 'file')
+                functional_data_folder = uigetdir([], 'choose the data folder');
+                
+                if obj.num_scans == 0
+                    fprintf('number of scans: %d', obj.num_scans);
+                    fprintf('number of slices per scan: %d', obj.num_slices);
+                    fprintf('number of blocks per scan: %d', obj.num_blocks);
+                end
+                
+                dl_videos = cell(obj.num_scans, obj.num_slices, obj.num_blocks);
+                video_frames = cell(obj.num_scans, obj.num_slices, obj.num_blocks);
+                for scan_idx=1:obj.num_scans
+                    for slice_idx=1:obj.num_slices
+                        for block_idx=1:obj.num_blocks
+                            tmp_str = sprintf('scan%d_slice%d_block%d.mat', scan_idx, slice_idx, block_idx);;
+                            file_name =fullfile(functional_data_folder, tmp_str);
+                            temp = whos(matfile(file_name));
+                            tmp_dims = temp.size;
+                            vars_raw = {file_name};
+                            fname_raw = @(vars, z) vars{1};
+                            dl_videos{scan_idx, slice_idx, block_idx} = IDL('vars', vars_raw, ...
+                                'type', 'mat', 'fname', fname_raw, 'dims', tmp_dims(1:(end-1)), ...
+                                'num_frames', tmp_dims(end));
+                            video_frames{scan_idx, slice_idx, block_idx} = tmp_dims(end);
+                        end
+                    end
+                end
+                
+                % save the data with block structures
+%                 if use_block
+%                     % to be added
+%                 end
+                save(target_file, 'dl_videos', 'video_frames');
+            end
+            %% choose the stack data
+            fprintf('step 2: choose the high resolution structural data\n');
+            target_file = fullfile(obj.data_folder, 'dl_stack.mat');
+            
+            if ~exist(target_file, 'file')
+                [tmp_file, tmp_path] = uigetfile('', 'high resolution stack file');
+                file_name = fullfile(tmp_path, tmp_file);
+                temp = whos(matfile(file_name));
+                dl_stack = IDL('vars', file_name, 'type', 'mat4d', ...
+                    'fname', @(vars, z) vars{1}, 'dims', temp.size,...
+                    'num_frames', 1, 'nfiles', false);
+                save(target_file, 'dl_stack')
+            end
+            
+            %% load registration.CSV
+            fprintf('step 3: choose the csv file for aligning 2P space and EM space.\n');
+            target_file = fullfile(obj.data_folder, 'registration.csv');
+            if ~exist(target_file, 'file')
+                [tmp_file, tmp_path] = uigetfile('*.csv', 'choose registration.csv');
+                copyfile(fullfile(tmp_path, tmp_file), target_file);
+            end
+        end
         
         %% create a database schema 
         function create_schema(obj)

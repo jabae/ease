@@ -31,9 +31,10 @@ end
 
 if isempty(datasets) || (length(datasets)== 1 && strcmpi(datasets, 'example_data'))
     edit(fullfile(obj.dir_project, 'metainfo.yaml'));
-    error('no datasets available for this project.');
+    warning('no datasets available for this project.');
 end
 fprintf('\n**********choose the data to use**********\n');
+fprintf('0: add new dataset\n'); 
 for m=1:length(datasets)
     fprintf('%d: %s\n', m, datasets{m});
 end
@@ -45,6 +46,20 @@ while true
         data_name = datasets{data_id};
         fprintf('you selected data %s\n', data_name);
         break;
+    elseif data_id==0
+        obj.add_dataset(); 
+
+        % make the choice 
+        temp = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
+        obj.datasets_list = temp.datasets_list;
+        datasets = obj.datasets_list; 
+        fprintf('\n**********choose the data to use**********\n');
+        fprintf('0: add new dataset\n');
+        for m=1:length(datasets)
+            fprintf('%d: %s\n', m, datasets{m});
+        end
+        fprintf('********************************************\n');
+
     else
         data_id = input('please type a valid data ID: ');
     end
@@ -56,14 +71,14 @@ obj.data_name = data_name;
 obj.yaml_path = fullfile(obj.dir_project, sprintf('%s_config.yaml', data_name));
 if exist(obj.yaml_path, 'file')
     obj.read_config();
+else
+    % assign folders corresponding this this data
+    obj.script_folder = fullfile(obj.dir_project, 'scripts', data_name);
+    obj.output_folder = fullfile(obj.dir_project, 'results', data_name);
+    obj.data_folder = fullfile(obj.dir_project, 'data', data_name);
+    obj.fig_folder = fullfile(obj.dir_project, 'Figures', data_name);
+    obj.video_folder = fullfile(obj.dir_project, 'Videos', data_name);
 end
-
-% assign folders corresponding this this data
-obj.script_folder = fullfile(obj.dir_project, 'scripts', data_name);
-obj.output_folder = fullfile(obj.dir_project, 'results', data_name);
-obj.data_folder = fullfile(obj.dir_project, 'data', data_name);
-obj.fig_folder = fullfile(obj.dir_project, 'Figures', data_name);
-obj.video_folder = fullfile(obj.dir_project, 'Videos', data_name);
 
 if ~exist(obj.script_folder, 'dir')
     mkdir(obj.script_folder);
@@ -134,6 +149,9 @@ else
     obj.em_segmentation = temp(1); 
 end 
 obj.matfile_em = sprintf('em_%d.mat', obj.em_segmentation); 
+
+%% import data 
+obj.import_data(); 
 
 %% update transformation info
 obj.transformation = []; 

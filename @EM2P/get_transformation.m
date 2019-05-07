@@ -35,8 +35,12 @@ elseif exist(fullfile(obj.data_folder, obj.matfile_transformation), 'file')
     obj.transformation = struct('A_convert', A_convert, 'offset', offset);
 else
     %% compute the transformationa gain
+    csv_file = fullfile(obj.data_folder, obj.registration_csv); 
+    if ~exist(csv_file, 'file')
+        obj.import_data(); 
+    end 
     % load the coordinates of neuron centroids in two spaces
-    temp = csvread(fullfile(obj.data_folder, obj.registration_csv), 1);
+    temp = csvread(csv_file, 1);
     y_2p = temp(:, 4:6);    % locations in the 2p space (unit: um)
     y_em = temp(:, 1:3)/1000;    % locations in the em space (unit: nm)
     ref_ids = temp(:, end);
