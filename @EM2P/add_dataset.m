@@ -29,7 +29,7 @@ if any(strcmpi(datasets, dataname))
     fprintf('The name ''%s'' is already used by another dataset. Please use a different name\n', dataname);
     return;
 else
-    datasets(end+1) = dataname;
+    datasets{end+1} = dataname;
 end
 
 % dabase information

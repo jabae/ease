@@ -34,7 +34,7 @@ function init_project(obj, dir_project)
 
 %% create a project folder
 if ~exist('dir_project', 'var') || isempty(dir_project)
-    obj.dir_project = uigetdir();
+    obj.dir_projeceat = uigetdir();
 end
 
 %% create subfolders
