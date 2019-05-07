@@ -33,7 +33,8 @@ else
 end
 
 % dabase information
-datajoint_name = input('database name (e.g. ta3): ', 's');
+database_name = input('database name (e.g., microns_ta3): ', 's'); 
+datajoint_name = input('database alias (e.g. ta3): ', 's');
 mesh_tablename = input('table of the EM meshes (e.g., ta3.Mesh): ', 's');
 
 % save the added dataset
@@ -41,6 +42,7 @@ obj.datasets_list = datasets;
 temp = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
 temp.datasets_list = datasets;
 temp.(dataname) = struct('datajoint_name', datajoint_name,...
+    'database_name', database_name, ...
     'rel_mesh', mesh_tablename);
 yaml.WriteYaml(fullfile(obj.dir_project, 'metainfo.yaml'), temp);
 
