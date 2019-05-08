@@ -6,7 +6,7 @@ if ~isempty(obj.video_zvals)
     fprintf('The videos have been registered once. \n Please set ease.video_zvals = [] if you want to align again.\n ');
     return;
 else
-    fprintf('Doing a rough registration betweeen the stack data and the video ')
+    fprintf('Doing a rough registration betweeen the stack data and the video \n')
 end
 
 % shifts for the stack data and video data
