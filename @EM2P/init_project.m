@@ -53,7 +53,7 @@ if ~exist(project_info, 'file')
     metainfo.datasets_list = {'pinky100'};
     metainfo.databases_list = {'127.0.0.1:3306'};
     metainfo.example_data = struct('datajoint_name', 'ta3p100', ...
-        'database_name', 'microns_ta3p100', 'rel_mesh', ta3p100.Mesh);
+        'database_name', 'microns_ta3p100', 'rel_mesh', 'ta3p100.Mesh');
     yaml.WriteYaml(project_info, metainfo);
 end
 
