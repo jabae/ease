@@ -69,6 +69,9 @@ obj.video_folder = fullfile(obj.dir_project, 'Videos', dataname);
 
 obj.write_config();
 
+% create a schema 
+obj.create_schema(); 
+
 %% things to do 
 fprintf('%s: dataset info added. Next we need the actual data for this dataset.\n', dataname); 
 fprintf('\t1: registration.csv. A csv file for aligning EM space and the CI space.\n'); 
