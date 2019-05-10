@@ -24,7 +24,7 @@ video_mat_file1 = fullfile(obj.data_folder, obj.matfile_video);
 video_mat_file2 = fullfile(obj.data_folder, 'dl_videos.mat'); 
 
 if exist(video_mat_file1, 'file')
-    video_mat_file = video_matfile1; 
+    video_mat_file = video_mat_file1; 
 elseif exist(video_mat_file2, 'file')
     video_mat_file = video_mat_file2; 
 else

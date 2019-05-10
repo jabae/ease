@@ -34,7 +34,7 @@ if isempty(datasets) || (length(datasets)== 1 && strcmpi(datasets, 'example_data
     warning('no datasets available for this project.');
 end
 fprintf('\n**********choose the data to use**********\n');
-fprintf('0: add new dataset\n'); 
+fprintf('0: add new dataset\n');
 for m=1:length(datasets)
     fprintf('%d: %s\n', m, datasets{m});
 end
@@ -47,19 +47,19 @@ while true
         fprintf('you selected data %s\n', data_name);
         break;
     elseif data_id==0
-        obj.add_dataset(); 
-
-        % make the choice 
+        obj.add_dataset();
+        
+        % make the choice
         temp = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
         obj.datasets_list = temp.datasets_list;
-        datasets = obj.datasets_list; 
+        datasets = obj.datasets_list;
         fprintf('\n**********choose the data to use**********\n');
         fprintf('0: add new dataset\n');
         for m=1:length(datasets)
             fprintf('%d: %s\n', m, datasets{m});
         end
         fprintf('********************************************\n');
-
+        
     else
         data_id = input('please type a valid data ID: ');
     end
@@ -73,46 +73,39 @@ if exist(obj.yaml_path, 'file')
     obj.read_config();
 else
     % assign folders corresponding this this data
-    obj.script_folder = fullfile(obj.dir_project, 'scripts', data_name);
-    obj.output_folder = fullfile(obj.dir_project, 'results', data_name);
     obj.data_folder = fullfile(obj.dir_project, 'data', data_name);
     obj.fig_folder = fullfile(obj.dir_project, 'Figures', data_name);
     obj.video_folder = fullfile(obj.dir_project, 'Videos', data_name);
 end
 
-if ~exist(obj.script_folder, 'dir')
-    mkdir(obj.script_folder);
+folder_list = {'scripts', 'data', 'results', 'Figures', 'Videos'};
+name_list = {'script_folder', 'data_folder', 'output_folder', 'fig_folder', 'video_folder'};
+for m=1:length(name_list)
+    % folder for scripts
+    if isempty(obj.(name_list{m}))
+        obj.(name_list{m}) = fullfile(obj.dir_project, folder_list{m}, data_name);
+    end
+    if     ~exist( obj.(name_list{m}) , 'dir')
+        mkdir( obj.(name_list{m}) );
+    end
 end
-if ~exist(obj.data_folder, 'dir')
-    mkdir(obj.data_folder);
-end
-if ~exist(obj.output_folder, 'dir')
-    mkdir(obj.output_folder);
-end
-if ~exist(obj.fig_folder, 'dir')
-    mkdir(obj.fig_folder);
-end
-if ~exist(obj.video_folder, 'dir')
-    mkdir(obj.video_folder);
-end
-obj.write_config();
 
 %% datajoint
 metainfo = yaml.ReadYaml(fullfile(obj.dir_project, 'metainfo.yaml'));
 temp = metainfo.(obj.data_name);
-obj.dj_name = temp.datajoint_name; 
-obj.db_name = temp.database_name; 
+obj.dj_name = temp.datajoint_name;
+obj.db_name = temp.database_name;
 
-% create a schema 
+% create a schema
 if ~exist(fullfile(obj.dir_project, 'schemas', ['+',obj.dj_name]), 'dir')
-    obj.create_schema(); 
+    obj.create_schema();
 end
 
 if isfield(temp, 'em_scale_factor')
     obj.em_scale_factor = temp.em_scale_factor;
 else
-        obj.em_scale_factor = 0.001; 
-end 
+    obj.em_scale_factor = 0.001;
+end
 
 if isfield(temp, 'rel_mesh')  % high resolution meshes
     eval(sprintf('obj.rel_mesh=%s;', temp.rel_mesh));
@@ -130,29 +123,29 @@ catch
     fprintf('The EM footprints were not generated yet');
 end
 
-%% choose segmentation data 
+%% choose segmentation data
 try
     eval(sprintf('rel_seg = %s.Segmentation;', obj.dj_name));
-    temp = fetchn(rel_seg, 'segmentation'); 
+    temp = fetchn(rel_seg, 'segmentation');
 catch
     segmentation = fetchn(obj.rel_mesh, 'segmentation');
     temp = unique(segmentation);
 end
 if length(temp)>1
-    fprintf('there are %d versions of mesh: ', length(temp)); 
+    fprintf('there are %d versions of mesh: ', length(temp));
     for m=1:length(temp)
-        fprintf('%d; ', temp(m)); 
+        fprintf('%d; ', temp(m));
     end
-    fprintf('\n'); 
-    obj.em_segmentation = input('which one to use: '); 
+    fprintf('\n');
+    obj.em_segmentation = input('which one to use: ');
 else
-    obj.em_segmentation = temp(1); 
-end 
-obj.matfile_em = sprintf('em_%d.mat', obj.em_segmentation); 
+    obj.em_segmentation = temp(1);
+end
+obj.matfile_em = sprintf('em_%d.mat', obj.em_segmentation);
 
-%% import data 
-obj.import_data(); 
+%% import data
+% obj.import_data();
 
 %% update transformation info
-obj.transformation = []; 
-obj.get_transformation(); 
+obj.transformation = [];
+obj.get_transformation();
