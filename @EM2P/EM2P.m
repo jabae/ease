@@ -547,6 +547,7 @@ classdef EM2P < handle
             A_all = cell(n_list, 1);
             Acorr_all = cell(n_list, 1);
             Aem_all = cell(n_list, 1);
+            EM_voxels = cell(n_list, 1); 
             C_all = cell(n_list, 1);
             Craw_all = cell(n_list, 1);
             S_all = cell(n_list, 1);
@@ -570,6 +571,7 @@ classdef EM2P < handle
                 A_all{m} = neuron.A;
                 Acorr_all{m} = neuron.A_corr;
                 Aem_all{m} = neuron.A_em;
+                EM_voxels{m} = neuron.spatial_range; 
                 C_all{m} = neuron.C;
                 Craw_all{m} = neuron.C_raw;
                 S_all{m} = neuron.S;
@@ -649,7 +651,7 @@ classdef EM2P < handle
             results.A = sparse(reshape(results.A, d, K)); 
             results.A_corr = sparse(reshape(results.A_corr, d, K)); 
             results.A_em = sparse(reshape(results.A_em, d, K)); 
-            
+            results.EM_voxels = EM_voxels; 
         end
         
         %% backup results 
