@@ -1,5 +1,5 @@
 # EASE: EM-Assisted Sources Extraction. 
-
+![](graph_abstract.png)
 EASE is a toolbox for fusing calcium imaging data and densely reconstructed Electron Microscopy (EM) segments. 
 
 ## Requirements 
