@@ -125,10 +125,12 @@ end
 
 %% choose segmentation data
 try
-    eval(sprintf('rel_seg = %s.Segmentation;', obj.dj_name));
-    temp = fetchn(rel_seg, 'segmentation');
+    %eval(sprintf('rel_seg = %s.Segmentation;', obj.dj_name));
+    %temp = fetchn(rel_seg, 'segmentation');
+    eval(sprintf('rel_seg = %s.Segment;', obj.dj_name));
+    temp = unique(fetchn(rel_seg, 'version'));
 catch
-    segmentation = fetchn(obj.rel_mesh, 'segmentation');
+    segmentation = fetchn(obj.rel_mesh, 'version');
     temp = unique(segmentation);
 end
 if length(temp)>1
