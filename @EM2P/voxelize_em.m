@@ -31,9 +31,9 @@ function voxelize_em(obj, use_parallel)
 %% voxelize all EM meshes
 assignin('base', 'options', obj.set_voxelization_options()); % create a struct variable storing parameters
 if exist('use_parallel', 'var') && (~use_parallel)
-    populate(obj.rel_voxels, sprintf('version=%d', obj.em_segmentation));
+    populate(obj.rel_voxels, sprintf('segmentation=%d', obj.em_segmentation));
 else
-    parpopulate(obj.rel_voxels, sprintf('version=%d', obj.em_segmentation));  
+    parpopulate(obj.rel_voxels, sprintf('segmentation=%d', obj.em_segmentation));  
 end 
 % collect EM range information 
 obj.collect_em_info(); 

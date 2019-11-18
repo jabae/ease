@@ -775,7 +775,7 @@ classdef EM2P < handle
         function create_schema(obj)
             %% copy the template schema 
             schema_folder = fullfile(obj.dir_project, 'schemas', ['+', obj.dj_name]); 
-            if exist(schema_folder, 'dir')
+            if exist('schema_folder', 'dir')
                fprintf('The schema has been created already. Do you want to delete it?\n'); 
                temp = input('choose (y/n): ', 's'); 
                if ~strcmpi(temp, 'y')
