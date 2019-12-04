@@ -10,11 +10,11 @@ ease.select_data();
 ease.voxelize_em(); 
 
 %% choose FOV
-show_fov = false;
+show_fov = true;
 ease.choose_FOV(show_fov);
 
 %% crop and align the video data and the stack data 
-% ease.load_stack();      % stack data
+ease.load_stack();      % stack data
 ease.load_video();      % video data
 
 ease.rough_registration_video();  % rough registration 
@@ -27,8 +27,8 @@ ease.crop_video;
 [Y_raw, Y_denoised] = ease.construct_Y();
 
 %% load EM info
-% ease.load_em(); 
-% EM_info = ease.em_data.EM_info;
+ease.load_em(); 
+EM_info = ease.em_data.EM_info;
 ease.get_em_boundaries(); 
 
 %% project EM masks onto the scanning planes 
